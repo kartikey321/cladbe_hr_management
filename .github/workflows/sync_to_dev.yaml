@@ -1,0 +1,46 @@
+name: Sync to Dev
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Remove platform-specific folders
+      - name: Remove platform-specific folders
+        run: |
+          rm -rf android ios linux macos windows web
+
+      # Step 3: Retrieve the latest commit hash from the main branch
+      - name: Get the latest commit hash from main
+        id: commit_hash
+        run: |
+          COMMIT_HASH=$(git rev-parse HEAD)
+          echo "Latest commit hash from main: $COMMIT_HASH"
+          echo "commit_hash=$COMMIT_HASH" >> $GITHUB_ENV
+
+      # Step 4: Configure Git with GitHub Token
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+
+      # Step 5: Commit the changes with the commit hash from main
+      - name: Commit changes
+        run: |
+          git add .
+          git commit -m "Removed platform-specific folders for dev branch, linked to commit ${{ env.commit_hash }}" || echo "No changes to commit"
+
+      # Step 6: Force Push changes to dev branch
+      - name: Force push to package branch
+        run: |
+          git push origin HEAD:package --force
