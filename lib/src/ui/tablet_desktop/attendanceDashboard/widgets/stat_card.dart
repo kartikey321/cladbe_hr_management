@@ -1,0 +1,64 @@
+import 'package:flutter/material.dart';
+import 'gradient_container.dart';
+
+class StatCard extends StatelessWidget {
+  final String title;
+  final String count;
+  final IconData? icon;
+
+  const StatCard({
+    super.key,
+    required this.title,
+    required this.count,
+    this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GradientContainer(
+      width: 261.52,
+      height: 120.45,
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Color(0xFF8B8D97),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              if (icon != null)
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2C2D35),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: const Color(0xFF8B8D97),
+                    size: 20,
+                  ),
+                ),
+            ],
+          ),
+          Text(
+            count,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 26,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

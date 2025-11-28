@@ -1,3 +1,5 @@
+import 'package:cladbe_hr_management/src/ui/tablet_desktop/Hr_screen.dart';
+import 'package:cladbe_hr_management/src/ui/tablet_desktop/attendanceDashboard/Attendance_dashboard.dart';
 import 'package:cladbe_shared/cladbe_shared.dart';
 import 'package:flutter/material.dart';
 import '../ui/mobile/demo_screen.dart';
@@ -6,7 +8,7 @@ import 'route_config/route_names.dart';
 
 class CustomRouteWidgetGenerator implements RouteWidgetGeneratorBase {
   @override
-  Map<String, RouteConfig> routeMap( ) => {
+  Map<String, RouteConfig> routeMap() => {
         // 'routeA': _RouteConfig(
         //   defaultWidget: DefaultWidgetForRouteA(),
         //   pathOverrides: {
@@ -30,7 +32,16 @@ class CustomRouteWidgetGenerator implements RouteWidgetGeneratorBase {
             return const DemoScreen();
           },
         ),
-
+        Routes.AttendanceDashboardScreen.name: RouteConfig(
+          defaultWidget: (arguments) {
+            return const AttendanceDashboard();
+          },
+        ),
+        Routes.HrScreen.name: RouteConfig(
+          defaultWidget: (arguments) {
+            return const HrScreen();
+          },
+        ),
         // Additional routes can be added here
       };
 

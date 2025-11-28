@@ -1,15 +1,22 @@
 import 'package:cladbe_shared/cladbe_shared.dart';
+import '../route_data/hrscreen_route_data.dart';
+import '../route_data/attendancedashboardscreen_route_data.dart';
 
 import '../route_data/demoscreen_route_data.dart';
 
-
 class Routes extends BaseRoutes {
+  static const RouteData AttendanceDashboardScreen =
+      AttendanceDashboardScreenRouteData(name: '/attendance-dashboard-screen');
+
+  static const RouteData HrScreen = HrScreenRouteData(name: '/hr-screen');
+
   static Routes? _instance;
-  
 
   static const RouteData DemoScreen = DemoScreenRouteData(name: '/demo-screen');
   Routes._internal()
       : super.protected(initialRoutes: [
+          Routes.HrScreen,
+          Routes.AttendanceDashboardScreen,
           DemoScreen
         ]);
 
