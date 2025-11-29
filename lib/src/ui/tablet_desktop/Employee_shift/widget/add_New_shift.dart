@@ -4,6 +4,7 @@ import 'package:cladbe_hr_management/src/ui/tablet_desktop/Employee_shift/widget
 import 'package:cladbe_hr_management/src/ui/widgets/timePicker.dart';
 import 'package:cladbe_shared/cladbe_shared.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hexify/hexify.dart';
 import 'package:provider/provider.dart';
@@ -11,13 +12,15 @@ import 'package:cladbe_shared/src/models/Attendance/weekly_shift_model.dart'
     as model;
 
 class AddNewShift extends StatefulWidget {
-  const AddNewShift({super.key});
+  final WeeklyShiftModel? shiftModel;
+
+  const AddNewShift({super.key, this.shiftModel});
 
   @override
   State<AddNewShift> createState() => _AddNewShiftState();
 }
 
-class _AddNewShiftState extends State<AddNewShift> {
+class _AddNewShiftState extends State<AddNewShift> with SuperMixin {
   final TextEditingController _shiftNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
@@ -40,11 +43,16 @@ class _AddNewShiftState extends State<AddNewShift> {
   final Map<String, bool> _sameAsAbove = {};
   final Map<String, String> _copyFromDay = {};
   final Map<String, MultiSelectController> _copyDayControllers = {};
+  final TextEditingController _bufferTimeController =
+      TextEditingController(text: '0');
+
+  bool _isActive = true;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with default values
+
+    // Default init
     for (var day in _weekDays) {
       _dayShifts[day] = [ShiftTimeSlot()];
       _dayBreaks[day] = [BreakTimeSlot()];
@@ -55,6 +63,66 @@ class _AddNewShiftState extends State<AddNewShift> {
       _copyFromDay[day] = 'Monday';
       _copyDayControllers[day] = MultiSelectController();
     }
+
+    // Load if editing
+    if (widget.shiftModel != null) {
+      _loadExistingShift(widget.shiftModel!);
+    }
+  }
+
+  void _loadExistingShift(model.WeeklyShiftModel s) {
+    _shiftNameController.text = s.shiftName;
+    _descriptionController.text = s.description ?? '';
+    _bufferTimeController.text = s.bufferTimeMinutes;
+    _isActive = s.isActive;
+
+    for (var entry in s.weekSchedule.entries) {
+      String day = entry.key.displayName;
+      DaySchedule data = entry.value;
+
+      /// MARK AS OFF
+      _markAsOff[day] = data.isOff;
+
+      /// EVERY OPTIONS (raw values)
+      _everyOptions[day] = List.from(data.offWeeks ?? []);
+
+      /// 🔥 FIXED: Update Dropdown UI State
+      _everyControllers[day]!.clearAllSelection();
+
+      if (_everyOptions[day]!.isNotEmpty) {
+        _everyControllers[day]!.setSelectedOptions(
+          _everyOptions[day]!
+              .map((e) => ValueItem(label: e, value: e))
+              .toList(),
+        );
+      }
+
+      /// --- REBUILD SHIFTS ---
+      _dayShifts[day] = [];
+      for (var sh in data.shifts) {
+        var slot = ShiftTimeSlot();
+        slot.startController.text =
+            '${sh.startTime.hour.toString().padLeft(2, '0')}:${sh.startTime.minute.toString().padLeft(2, '0')}';
+        slot.endController.text =
+            '${sh.endTime.hour.toString().padLeft(2, '0')}:${sh.endTime.minute.toString().padLeft(2, '0')}';
+        _dayShifts[day]!.add(slot);
+      }
+      if (_dayShifts[day]!.isEmpty) _dayShifts[day]!.add(ShiftTimeSlot());
+
+      /// --- REBUILD BREAKS ---
+      _dayBreaks[day] = [];
+      for (var br in data.breaks) {
+        var slot = BreakTimeSlot();
+        slot.startController.text =
+            '${br.startTime.hour.toString().padLeft(2, '0')}:${br.startTime.minute.toString().padLeft(2, '0')}';
+        slot.endController.text =
+            '${br.endTime.hour.toString().padLeft(2, '0')}:${br.endTime.minute.toString().padLeft(2, '0')}';
+        _dayBreaks[day]!.add(slot);
+      }
+      if (_dayBreaks[day]!.isEmpty) _dayBreaks[day]!.add(BreakTimeSlot());
+    }
+
+    setState(() {});
   }
 
   void _copyScheduleFromDay(String toDay, String fromDay) {
@@ -102,24 +170,52 @@ class _AddNewShiftState extends State<AddNewShift> {
       dayBreaks: _dayBreaks,
       markAsOff: _markAsOff,
       everyOptions: _everyOptions,
+      isActive: _isActive,
       context: context,
+      bufferTimeMinutes:
+          _bufferTimeController.text.isEmpty ? '0' : _bufferTimeController.text,
     );
   }
 
-  void _addShift() async {
+  void _saveShift() async {
     final weeklyShift = _convertToModel();
+    try {
+      if (weeklyShift == null) return;
+      if (widget.shiftModel == null) {
+        LoggerService.info(
+            "Converted WeeklyShiftModel: ${weeklyShift.toMap()}");
 
-    if (weeklyShift != null) {
-      LoggerService.info("Converted WeeklyShiftModel: ${weeklyShift.toMap()}");
+        await ShiftHelper.addShift(
+          companyId: context.getCompanyId(),
+          weeklyShift: weeklyShift,
+        );
+        showSnackBar(
+          "Shift added successfully",
+          snackBarStatus: SnackBarStatus.success,
+        );
+        Provider.of<PopupProvider>(context, listen: false).popPopupStack();
+      } else {
+        LoggerService.info(
+            "Converted WeeklyShiftModel: ${weeklyShift.toMap()}");
 
-      await ShiftHelper.addShift(
-        companyId: context.getCompanyId(),
-        weeklyShift: weeklyShift,
+        await ShiftHelper.updateShift(
+          companyId: context.getCompanyId(),
+          weekShiftId: widget.shiftModel!.id,
+          shiftUpdates: weeklyShift.toMap(),
+        );
+        showSnackBar(
+          "Update Shift successfully",
+          snackBarStatus: SnackBarStatus.success,
+        );
+        Provider.of<PopupProvider>(context, listen: false).popPopupStack();
+      }
+    } catch (e) {
+      LoggerService.error("Error converting shift model: $e");
+      showSnackBar(
+        "Error saving shift:",
+        snackBarStatus: SnackBarStatus.error,
       );
-      showSuccessWithOverlay();
-      Navigator.of(context).pop(weeklyShift);
-    } else {
-      LoggerService.info("Converted WeeklyShiftModel: null");
+      return;
     }
   }
 
@@ -190,15 +286,61 @@ class _AddNewShiftState extends State<AddNewShift> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Description
                   CustomTextFormField(
                     controller: _descriptionController,
                     title: 'Description',
                     maxLines: 3,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
+// 🔥 Active / Inactive Toggle
+                  Row(
+                    children: [
+                      // Text(
+                      //   "Shift Active",
+                      //   style: GoogleFonts.poppins(
+                      //     color: Colors.white,
+                      //     fontSize: 14,
+                      //     fontWeight: FontWeight.w500,
+                      //   ),
+                      // ),
+                      // const SizedBox(width: 12),
+                      Switch(
+                        value: _isActive,
+                        activeThumbColor: const Color(0xFF5A67D8),
+                        onChanged: (value) {
+                          setState(() {
+                            _isActive = value;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        _isActive ? "Active" : "Inactive",
+                        style: GoogleFonts.poppins(
+                          color:
+                              _isActive ? Colors.greenAccent : Colors.redAccent,
+                          fontSize: 13,
+                        ),
+                      )
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+                  CustomTextFormField(
+                    keyboardType: TextInputType.number,
+                    controller: _bufferTimeController,
+                    title: 'Buffer Time (in minutes)',
+                    autovalidateMode: AutovalidateMode.always,
+                    inputFormatter: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+
+                    // name: 'Buffer Time',
+                    // textFieldEnabled: true,
+                  ),
+                  const SizedBox(height: 16),
                   // Shift Schedule
                   Row(
                     children: [
@@ -224,7 +366,7 @@ class _AddNewShiftState extends State<AddNewShift> {
                   ..._weekDays.asMap().entries.map((entry) {
                     int index = entry.key;
                     String day = entry.value;
-                    return _buildDaySchedule(day, index);
+                    return buildDaySchedule(day, index);
                   }),
 
                   const SizedBox(height: 24),
@@ -236,7 +378,7 @@ class _AddNewShiftState extends State<AddNewShift> {
                       height: 40,
                       child: ElevatedButton(
                         onPressed: () {
-                          _addShift();
+                          _saveShift();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF5A67D8),
@@ -245,7 +387,7 @@ class _AddNewShiftState extends State<AddNewShift> {
                           ),
                         ),
                         child: Text(
-                          "Add",
+                          widget.shiftModel == null ? "Add" : "Update",
                           style: GoogleFonts.poppins(
                             color: Colors.white,
                             fontSize: 14,
@@ -264,7 +406,7 @@ class _AddNewShiftState extends State<AddNewShift> {
     );
   }
 
-  Widget _buildDaySchedule(String day, int index) {
+  Widget buildDaySchedule(String day, int index) {
     bool isExpanded = _expandedDayIndex == index;
     bool isFirstDay = index == 0;
 
@@ -444,7 +586,7 @@ class _AddNewShiftState extends State<AddNewShift> {
                                       .entries
                                       .map((entry) {
                                     int slotIndex = entry.key;
-                                    return _buildShiftTimeSlot(day, slotIndex);
+                                    return buildShiftTimeSlot(day, slotIndex);
                                   }),
                                 ],
                               ),
@@ -503,7 +645,7 @@ class _AddNewShiftState extends State<AddNewShift> {
                                       .entries
                                       .map((entry) {
                                     int slotIndex = entry.key;
-                                    return _buildBreakTimeSlot(day, slotIndex);
+                                    return buildBreakTimeSlot(day, slotIndex);
                                   }),
                                 ],
                               ),
@@ -544,6 +686,25 @@ class _AddNewShiftState extends State<AddNewShift> {
                               onChanged: (value) {
                                 setState(() {
                                   _markAsOff[day] = value ?? false;
+
+                                  if (_markAsOff[day] == true) {
+                                    // Clear shift/break ONLY if "Every" is selected
+                                    if (_everyOptions[day]?.contains('Every') ??
+                                        false) {
+                                      for (var shift in _dayShifts[day]!) {
+                                        shift.startController.clear();
+                                        shift.endController.clear();
+                                      }
+                                      for (var brk in _dayBreaks[day]!) {
+                                        brk.startController.clear();
+                                        brk.endController.clear();
+                                      }
+                                    }
+                                  } else {
+                                    // When OFF is turned OFF → reset dropdown
+                                    _everyOptions[day] = [];
+                                    _everyControllers[day]!.clearAllSelection();
+                                  }
                                 });
                               },
                               activeColor: const Color(0xFF5A67D8),
@@ -584,6 +745,19 @@ class _AddNewShiftState extends State<AddNewShift> {
                             setState(() {
                               _everyOptions[day] = selected;
                               _disableSameAsAbove(day);
+
+                              // ❗ Only clear shifts/breaks if "Every" is selected
+                              if ((_markAsOff[day] ?? false) &&
+                                  selected.contains('Every')) {
+                                for (var shift in _dayShifts[day]!) {
+                                  shift.startController.clear();
+                                  shift.endController.clear();
+                                }
+                                for (var brk in _dayBreaks[day]!) {
+                                  brk.startController.clear();
+                                  brk.endController.clear();
+                                }
+                              }
                             });
                           },
                         ),
@@ -599,7 +773,7 @@ class _AddNewShiftState extends State<AddNewShift> {
     );
   }
 
-  Widget _buildShiftTimeSlot(String day, int index) {
+  Widget buildShiftTimeSlot(String day, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Row(
@@ -712,7 +886,7 @@ class _AddNewShiftState extends State<AddNewShift> {
     );
   }
 
-  Widget _buildBreakTimeSlot(String day, int index) {
+  Widget buildBreakTimeSlot(String day, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Row(

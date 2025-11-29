@@ -16,6 +16,8 @@ class ShiftConverterService {
     required Map<String, bool> markAsOff,
     required Map<String, List<String>> everyOptions,
     required BuildContext context,
+    required String bufferTimeMinutes,
+    required bool isActive,
   }) {
     // Validate shift name
     if (shiftName.trim().isEmpty) {
@@ -33,7 +35,17 @@ class ShiftConverterService {
       final isMarkedOff = markAsOff[dayName] ?? false;
       final options = everyOptions[dayName] ?? [];
 
-      // If day is marked as completely off (no specific weeks selected OR "Every" is selected)
+      // ❗️VALIDATION: Marked off but no dropdown selected
+      if (isMarkedOff && options.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(
+                  'Please select at least one off-week option for $dayName')),
+        );
+        return null;
+      }
+
+      // 🟢 Completely off (Every OR empty)
       if (isMarkedOff && (options.isEmpty || options.contains('Every'))) {
         weekSchedule[weekDay] = DaySchedule(
           day: weekDay,
@@ -60,7 +72,7 @@ class ShiftConverterService {
       );
       if (breaks == null) return null;
 
-      // Create day schedule with offWeeks if marked off for specific weeks
+      // Marked off only for specific weeks
       weekSchedule[weekDay] = DaySchedule(
         day: weekDay,
         isOff: false,
@@ -71,13 +83,14 @@ class ShiftConverterService {
     }
 
     return WeeklyShiftModel(
-      id: generateUniqueId(),
-      shiftName: shiftName.trim(),
-      description: description.trim(),
-      weekSchedule: weekSchedule,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
+        id: generateUniqueId(),
+        shiftName: shiftName.trim(),
+        description: description.trim(),
+        weekSchedule: weekSchedule,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        bufferTimeMinutes: bufferTimeMinutes,
+        isActive: isActive);
   }
 
   /// Converts shift time slots to ShiftTime models

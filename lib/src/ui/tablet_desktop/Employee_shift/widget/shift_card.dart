@@ -4,7 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hexify/hexify.dart';
 
 class ShiftCard extends StatelessWidget {
-  const ShiftCard({super.key});
+  final WeeklyShiftModel shiftModel;
+
+  const ShiftCard({super.key, required this.shiftModel});
 
   @override
   Widget build(BuildContext context) {
@@ -27,20 +29,17 @@ class ShiftCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// TOP ROW — Title + Active Badge
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Shift Name",
+                shiftModel.shiftName,
                 style: GoogleFonts.poppins(
                   color: Colors.white,
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-
-              /// ACTIVE BADGE
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
@@ -49,7 +48,7 @@ class ShiftCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  "Active",
+                  shiftModel.isActive ? "Active" : "Inactive",
                   style: GoogleFonts.poppins(
                     color: AppDefault.greenColor,
                     fontWeight: FontWeight.w400,
@@ -59,37 +58,28 @@ class ShiftCard extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 6),
-
-          /// SUBTITLE — Days
           Text(
-            "5 Days",
+            "${shiftModel.totalWorkingDays} Days a Week",
             style: GoogleFonts.poppins(
               color: Colors.grey.shade400,
-              fontSize: 16,
+              fontSize: 11,
             ),
           ),
-
-          const SizedBox(height: 10),
-
-          /// DIVIDER LINE
+          const SizedBox(height: 15),
           Container(
             height: 1,
             color: Colors.white.withOpacity(0.1),
           ),
-
-          const SizedBox(height: 15),
-
+          const SizedBox(height: 22),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              /// Duration
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "9 Hours",
+                    "${shiftModel.getShiftHoursForDay(WeekDay.monday).toStringAsFixed(1)} Hrs",
                     style: GoogleFonts.poppins(
                       color: AppDefault.textColor,
                       fontSize: 14,
@@ -105,13 +95,11 @@ class ShiftCard extends StatelessWidget {
                   ),
                 ],
               ),
-
-              /// Break Time
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "1 Hour",
+                    "${shiftModel.getBreakHoursForDay(WeekDay.monday).toStringAsFixed(1)} Hrs",
                     style: GoogleFonts.poppins(
                       color: AppDefault.textColor,
                       fontSize: 14,
@@ -127,8 +115,6 @@ class ShiftCard extends StatelessWidget {
                   ),
                 ],
               ),
-
-              /// CIRCLE AVATARS (example images)
               Row(
                 children: [
                   _avatar("https://i.pravatar.cc/100?img=1"),
@@ -147,9 +133,9 @@ class ShiftCard extends StatelessWidget {
   /// Avatar builder
   Widget _avatar(String url) {
     return Padding(
-      padding: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.only(left: 2),
       child: CircleAvatar(
-        radius: 20,
+        radius: 15,
         backgroundImage: NetworkImage(url),
       ),
     );
