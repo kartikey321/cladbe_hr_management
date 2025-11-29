@@ -1,10 +1,14 @@
-import 'package:cladbe_hr_management/src/models/weekly_shift_model.dart'
-    as model;
+import 'package:cladbe_hr_management/src/Helpers/shift_helper.dart';
+import 'package:cladbe_hr_management/src/ui/tablet_desktop/Employee_shift/services/shift_converter_service.dart';
+import 'package:cladbe_hr_management/src/ui/tablet_desktop/Employee_shift/widget/time_slot_models.dart';
+import 'package:cladbe_hr_management/src/ui/widgets/timePicker.dart';
 import 'package:cladbe_shared/cladbe_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hexify/hexify.dart';
 import 'package:provider/provider.dart';
+import 'package:cladbe_shared/src/models/Attendance/weekly_shift_model.dart'
+    as model;
 
 class AddNewShift extends StatefulWidget {
   const AddNewShift({super.key});
@@ -79,111 +83,43 @@ class _AddNewShiftState extends State<AddNewShift> {
     });
   }
 
+  // Disable "Same As Above" when user makes changes
+  void _disableSameAsAbove(String day) {
+    if (_sameAsAbove[day] ?? false) {
+      setState(() {
+        _sameAsAbove[day] = false;
+      });
+    }
+  }
+
+  /// Converts UI data to WeeklyShiftModel using the service
   model.WeeklyShiftModel? _convertToModel() {
-    // Validate shift name
-    if (_shiftNameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a shift name')),
-      );
-      return null;
-    }
-
-    final weekSchedule = <model.WeekDay, model.DaySchedule>{};
-
-    for (int i = 0; i < _weekDays.length; i++) {
-      final dayName = _weekDays[i];
-      final weekDay = model.WeekDay.values[i];
-      final isOff = _markAsOff[dayName] ?? false;
-
-      // If day is marked as off, set empty shifts and breaks
-      if (isOff) {
-        weekSchedule[weekDay] = model.DaySchedule(
-          day: weekDay,
-          isOff: true,
-          shifts: [],
-          breaks: [],
-        );
-        continue;
-      }
-
-      // Convert shift times
-      final shifts = <model.ShiftTime>[];
-      for (var slot in _dayShifts[dayName]!) {
-        if (slot.startController.text.isNotEmpty &&
-            slot.endController.text.isNotEmpty) {
-          try {
-            final startParts = slot.startController.text.split(':');
-            final endParts = slot.endController.text.split(':');
-
-            shifts.add(model.ShiftTime(
-              startTime: model.TimeOfDay(
-                hour: int.parse(startParts[0]),
-                minute: int.parse(startParts[1]),
-              ),
-              endTime: model.TimeOfDay(
-                hour: int.parse(endParts[0]),
-                minute: int.parse(endParts[1]),
-              ),
-            ));
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Invalid time format for $dayName shift')),
-            );
-            return null;
-          }
-        }
-      }
-
-      // Convert break times
-      final breaks = <model.BreakTime>[];
-      for (var slot in _dayBreaks[dayName]!) {
-        if (slot.startController.text.isNotEmpty &&
-            slot.endController.text.isNotEmpty) {
-          try {
-            final startParts = slot.startController.text.split(':');
-            final endParts = slot.endController.text.split(':');
-
-            breaks.add(model.BreakTime(
-              startTime: model.TimeOfDay(
-                hour: int.parse(startParts[0]),
-                minute: int.parse(startParts[1]),
-              ),
-              endTime: model.TimeOfDay(
-                hour: int.parse(endParts[0]),
-                minute: int.parse(endParts[1]),
-              ),
-            ));
-          } catch (e) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Invalid time format for $dayName break')),
-            );
-            return null;
-          }
-        }
-      }
-
-      weekSchedule[weekDay] = model.DaySchedule(
-        day: weekDay,
-        isOff: false,
-        shifts: shifts,
-        breaks: breaks,
-      );
-    }
-
-    return model.WeeklyShiftModel(
-      shiftName: _shiftNameController.text.trim(),
-      description: _descriptionController.text.trim(),
-      weekSchedule: weekSchedule,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+    return ShiftConverterService.convertToModel(
+      shiftName: _shiftNameController.text,
+      description: _descriptionController.text,
+      weekDays: _weekDays,
+      dayShifts: _dayShifts,
+      dayBreaks: _dayBreaks,
+      markAsOff: _markAsOff,
+      everyOptions: _everyOptions,
+      context: context,
     );
   }
 
-  void _handleAdd() {
-    final model = _convertToModel();
-    if (model != null) {
-      // Close the popup and return the model
-      Navigator.of(context).pop(model);
+  void _addShift() async {
+    final weeklyShift = _convertToModel();
+
+    if (weeklyShift != null) {
+      LoggerService.info("Converted WeeklyShiftModel: ${weeklyShift.toMap()}");
+
+      await ShiftHelper.addShift(
+        companyId: context.getCompanyId(),
+        weeklyShift: weeklyShift,
+      );
+      showSuccessWithOverlay();
+      Navigator.of(context).pop(weeklyShift);
+    } else {
+      LoggerService.info("Converted WeeklyShiftModel: null");
     }
   }
 
@@ -300,7 +236,7 @@ class _AddNewShiftState extends State<AddNewShift> {
                       height: 40,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Handle add shift
+                          _addShift();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF5A67D8),
@@ -410,41 +346,49 @@ class _AddNewShiftState extends State<AddNewShift> {
                           activeThumbColor: const Color(0xFF5A67D8),
                         ),
                         const Spacer(),
-                        SizedBox(
-                          width: 120,
-                          child: DropdownTextField(
-                            dropdown: true,
-                            dropdownEnabled: _sameAsAbove[day] ?? false,
-                            dropdownController: _copyDayControllers[day],
-                            dropdownItems: _weekDays
-                                .where((d) =>
-                                    _weekDays.indexOf(d) <
-                                    _weekDays.indexOf(day))
-                                .toList(),
-                            selectedDropdownItems: [_copyFromDay[day]!],
-                            hint: 'Select Day',
-                            onOptionSelected: (List<String> selected) {
-                              if (selected.isNotEmpty) {
-                                setState(() {
-                                  _copyFromDay[day] = selected.first;
-                                  if (_sameAsAbove[day] ?? false) {
+                        // Only show dropdown when switch is ON
+                        if (_sameAsAbove[day] ?? false)
+                          SizedBox(
+                            width: 120,
+                            child: DropdownTextField(
+                              dropdown: true,
+                              dropdownEnabled: true,
+                              dropdownController: _copyDayControllers[day],
+                              dropdownItems: _weekDays
+                                  .where((d) =>
+                                      _weekDays.indexOf(d) <
+                                      _weekDays.indexOf(day))
+                                  .toList(),
+                              selectedDropdownItems: [_copyFromDay[day]!],
+                              hint: 'Select Day',
+                              onOptionSelected: (List<String> selected) {
+                                if (selected.isNotEmpty) {
+                                  setState(() {
+                                    _copyFromDay[day] = selected.first;
                                     _copyScheduleFromDay(day, selected.first);
-                                  }
-                                });
-                              }
-                            },
+                                  });
+                                }
+                              },
+                            ),
                           ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
                   ],
 
                   // Shift and Break sections side by side
+                  // Only gray out if completely off (no specific weeks selected OR "Every" is selected)
                   Opacity(
-                    opacity: (_markAsOff[day] ?? false) ? 0.4 : 1.0,
+                    opacity: (_markAsOff[day] ?? false) &&
+                            ((_everyOptions[day]?.isEmpty ?? true) ||
+                                (_everyOptions[day]?.contains('Every') ??
+                                    false))
+                        ? 0.4
+                        : 1.0,
                     child: IgnorePointer(
-                      ignoring: _markAsOff[day] ?? false,
+                      ignoring: (_markAsOff[day] ?? false) &&
+                          ((_everyOptions[day]?.isEmpty ?? true) ||
+                              (_everyOptions[day]?.contains('Every') ?? false)),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -639,6 +583,7 @@ class _AddNewShiftState extends State<AddNewShift> {
                           onOptionSelected: (List<String> selected) {
                             setState(() {
                               _everyOptions[day] = selected;
+                              _disableSameAsAbove(day);
                             });
                           },
                         ),
@@ -677,6 +622,7 @@ class _AddNewShiftState extends State<AddNewShift> {
           Expanded(
             child: DropdownTextField(
               name: "Shift Start",
+              textFieldEnabled: false,
               nameStyle: GoogleFonts.poppins(
                 color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 12,
@@ -694,13 +640,14 @@ class _AddNewShiftState extends State<AddNewShift> {
               suffix: IconButton(
                 icon: const Icon(Icons.access_time, color: Color(0xFF5A67D8)),
                 onPressed: () async {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.now(),
-                  );
+                  final time =
+                      await CustomTimepicker.showThemedTimePicker(context);
                   if (time != null) {
-                    _dayShifts[day]![index].startController.text =
-                        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                    setState(() {
+                      _dayShifts[day]![index].startController.text =
+                          '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                      _disableSameAsAbove(day);
+                    });
                   }
                 },
               ),
@@ -711,6 +658,7 @@ class _AddNewShiftState extends State<AddNewShift> {
           Expanded(
             child: DropdownTextField(
               name: "Shift End",
+              textFieldEnabled: false,
               nameStyle: GoogleFonts.poppins(
                 color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 12,
@@ -728,13 +676,14 @@ class _AddNewShiftState extends State<AddNewShift> {
               suffix: IconButton(
                 icon: const Icon(Icons.access_time, color: Color(0xFF5A67D8)),
                 onPressed: () async {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.now(),
-                  );
+                  final time =
+                      await CustomTimepicker.showThemedTimePicker(context);
                   if (time != null) {
-                    _dayShifts[day]![index].endController.text =
-                        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                    setState(() {
+                      _dayShifts[day]![index].endController.text =
+                          '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                      _disableSameAsAbove(day);
+                    });
                   }
                 },
               ),
@@ -786,6 +735,7 @@ class _AddNewShiftState extends State<AddNewShift> {
           Expanded(
             child: DropdownTextField(
               name: "Break Start",
+              textFieldEnabled: false,
               nameStyle: GoogleFonts.poppins(
                 color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 12,
@@ -803,13 +753,14 @@ class _AddNewShiftState extends State<AddNewShift> {
               suffix: IconButton(
                 icon: const Icon(Icons.access_time, color: Color(0xFF5A67D8)),
                 onPressed: () async {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.now(),
-                  );
+                  final time =
+                      await CustomTimepicker.showThemedTimePicker(context);
                   if (time != null) {
-                    _dayBreaks[day]![index].startController.text =
-                        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                    setState(() {
+                      _dayBreaks[day]![index].startController.text =
+                          '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                      _disableSameAsAbove(day);
+                    });
                   }
                 },
               ),
@@ -820,6 +771,7 @@ class _AddNewShiftState extends State<AddNewShift> {
           Expanded(
             child: DropdownTextField(
               name: "Break End",
+              textFieldEnabled: false,
               nameStyle: GoogleFonts.poppins(
                 color: Colors.white.withValues(alpha: 0.9),
                 fontSize: 12,
@@ -837,13 +789,14 @@ class _AddNewShiftState extends State<AddNewShift> {
               suffix: IconButton(
                 icon: const Icon(Icons.access_time, color: Color(0xFF5A67D8)),
                 onPressed: () async {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.now(),
-                  );
+                  final time =
+                      await CustomTimepicker.showThemedTimePicker(context);
                   if (time != null) {
-                    _dayBreaks[day]![index].endController.text =
-                        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                    setState(() {
+                      _dayBreaks[day]![index].endController.text =
+                          '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                      _disableSameAsAbove(day);
+                    });
                   }
                 },
               ),
@@ -876,16 +829,19 @@ class _AddNewShiftState extends State<AddNewShift> {
   void dispose() {
     _shiftNameController.dispose();
     _descriptionController.dispose();
+
+    // Dispose all shift and break controllers
+    for (var dayShifts in _dayShifts.values) {
+      for (var shift in dayShifts) {
+        shift.dispose();
+      }
+    }
+    for (var dayBreaks in _dayBreaks.values) {
+      for (var breakSlot in dayBreaks) {
+        breakSlot.dispose();
+      }
+    }
+
     super.dispose();
   }
-}
-
-class ShiftTimeSlot {
-  TextEditingController startController = TextEditingController();
-  TextEditingController endController = TextEditingController();
-}
-
-class BreakTimeSlot {
-  TextEditingController startController = TextEditingController();
-  TextEditingController endController = TextEditingController();
 }

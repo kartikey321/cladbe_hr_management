@@ -27,7 +27,8 @@ class FlavorType {
       tabs: [
         LeftBarElement(
           name: 'Project',
-          image: CustomAssetProvider(path: 'assets/bank.png', packageName: ''),
+          image: CustomAssetProvider(
+              path: 'assets/bank.png', packageName: 'cladbe_hr_management'),
           routes: Map.fromEntries(entries),
           elements: {},
         )
@@ -44,7 +45,8 @@ class FlavorType {
       tabs: [
         LeftBarElement(
           name: 'Project',
-          image: CustomAssetProvider(path: 'assets/bank.png', packageName: ''),
+          image: CustomAssetProvider(
+              path: 'assets/bank.png', packageName: 'cladbe_hr_management'),
           routes: Map.fromEntries(entries),
           elements: {},
         )
@@ -61,7 +63,8 @@ class FlavorType {
       tabs: [
         LeftBarElement(
           name: 'Project',
-          image: CustomAssetProvider(path: 'assets/bank.png', packageName: ''),
+          image: CustomAssetProvider(
+              path: 'assets/bank.png', packageName: 'cladbe_hr_management'),
           routes: Map.fromEntries(entries),
           elements: {},
         )
