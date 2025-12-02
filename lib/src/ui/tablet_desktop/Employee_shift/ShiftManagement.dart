@@ -1,4 +1,5 @@
 import 'package:cladbe_hr_management/src/Helpers/shift_helper.dart';
+import 'package:cladbe_hr_management/src/routes/route_config/route_names.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/Employee_shift/widget/add_New_shift.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/Employee_shift/widget/shift_card.dart';
 import 'package:cladbe_shared/cladbe_shared.dart';
@@ -59,20 +60,12 @@ class _ShiftManagementState extends State<ShiftManagement> {
         Align(
           alignment: AlignmentGeometry.bottomRight,
           child: InkWell(
-            onTap: () {
+            onDoubleTap: () {
               //
-              Provider.of<PopupProvider>(context, listen: false)
-                  .pushPopupStack = Popup(
-                barrierDismissible: true,
-                id: 'new-shift-popup',
-                element: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Center(
-                      child: SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.7,
-                          width: MediaQuery.of(context).size.width * 0.5,
-                          child: const AddNewShift())),
-                ),
+              NavigatorHelper.navigateTo(
+                context,
+                Routes.AddNewShiftScreen,
+                {},
               );
             },
             child: Container(

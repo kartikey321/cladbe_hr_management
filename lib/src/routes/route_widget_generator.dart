@@ -1,3 +1,4 @@
+import 'package:cladbe_hr_management/src/ui/tablet_desktop/Employee_shift/widget/add_New_shift.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/Holiday/add_holiday.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/Hr_screen.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/attendanceDashboard/Attendance_dashboard.dart';
@@ -41,6 +42,11 @@ class CustomRouteWidgetGenerator implements RouteWidgetGeneratorBase {
         Routes.HrScreen.name: RouteConfig(
           defaultWidget: (arguments) {
             return const HrScreen();
+          },
+        ),
+        Routes.AddNewShiftScreen.name: RouteConfig(
+          defaultWidget: (arguments) {
+            return const AddNewShift();
           },
         ),
         Routes.AddHolidayScreen.name: RouteConfig(

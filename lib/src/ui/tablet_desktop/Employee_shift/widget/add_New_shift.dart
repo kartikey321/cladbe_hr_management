@@ -225,6 +225,7 @@ class _AddNewShiftState extends State<AddNewShift> with SuperMixin {
 
         showSnackBar("Shift added successfully",
             snackBarStatus: SnackBarStatus.success);
+        NavigatorHelper.navigateBack(context);
         Provider.of<PopupProvider>(context, listen: false).popPopupStack();
         return;
       }
@@ -258,187 +259,194 @@ class _AddNewShiftState extends State<AddNewShift> with SuperMixin {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.9,
-        maxWidth: 1100,
-      ),
-      decoration: BoxDecoration(
-        gradient: Hexify(
-          gradientType: HexifyGradientType.linearGradient,
-          firstColor: '#2C2D37',
-          secondColor: '#26262D',
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF454545)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header
-          Container(
-            height: 50,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-              gradient: AppDefault.dialogHeaderGradient,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12),
-                topRight: Radius.circular(12),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const SizedBox(width: 24),
-                Text(
-                  "Add Shift",
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: Colors.white, size: 20),
-                  onPressed: () =>
-                      Provider.of<PopupProvider>(context, listen: false)
-                          .popPopupStack(),
-                ),
-              ],
-            ),
+    return Scaffold(
+      backgroundColor: AppDefault.backgroundColor,
+      body: Container(
+        // constraints: BoxConstraints(
+        //   maxHeight: MediaQuery.of(context).size.height * 0.9,
+        //   maxWidth: 1100,
+        // ),
+        decoration: BoxDecoration(
+          gradient: Hexify(
+            gradientType: HexifyGradientType.linearGradient,
+            firstColor: '#2C2D37',
+            secondColor: '#26262D',
           ),
-
-          // Body
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Shift Name
-                  CustomTextFormField(
-                    controller: _shiftNameController,
-                    title: 'Shift Name',
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                  ),
-                  const SizedBox(height: 16),
-
-                  CustomTextFormField(
-                    controller: _descriptionController,
-                    title: 'Description',
-                    maxLines: 3,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
-                  ),
-                  const SizedBox(height: 16),
-
-// 🔥 Active / Inactive Toggle
-                  Row(
-                    children: [
-                      // Text(
-                      //   "Shift Active",
-                      //   style: GoogleFonts.poppins(
-                      //     color: Colors.white,
-                      //     fontSize: 14,
-                      //     fontWeight: FontWeight.w500,
-                      //   ),
-                      // ),
-                      // const SizedBox(width: 12),
-                      Switch(
-                        value: _isActive,
-                        activeThumbColor: const Color(0xFF5A67D8),
-                        onChanged: (value) {
-                          setState(() {
-                            _isActive = value;
-                          });
-                        },
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF454545)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            widget.shiftModel != null
+                ? Container(
+                    height: 50,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      gradient: AppDefault.dialogHeaderGradient,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        _isActive ? "Active" : "Inactive",
-                        style: GoogleFonts.poppins(
-                          color:
-                              _isActive ? Colors.greenAccent : Colors.redAccent,
-                          fontSize: 13,
-                        ),
-                      )
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-                  CustomTextFormField(
-                    keyboardType: TextInputType.number,
-                    controller: _bufferTimeController,
-                    title: 'Buffer Time (in minutes)',
-                    autovalidateMode: AutovalidateMode.always,
-                    inputFormatter: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-
-                    // name: 'Buffer Time',
-                    // textFieldEnabled: true,
-                  ),
-                  const SizedBox(height: 16),
-                  // Shift Schedule
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.schedule_outlined,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        size: 22,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        "Shift Schedule",
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Week Days
-                  ..._weekDays.asMap().entries.map((entry) {
-                    int index = entry.key;
-                    String day = entry.value;
-                    return buildDaySchedule(day, index);
-                  }),
-
-                  const SizedBox(height: 24),
-
-                  // Add Button
-                  Center(
-                    child: SizedBox(
-                      width: 120,
-                      height: 40,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _saveShift();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF5A67D8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const SizedBox(width: 24),
+                        Text(
+                          "Add Shift",
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        child: Text(
-                          widget.shiftModel == null ? "Add" : "Update",
+                        IconButton(
+                          icon: const Icon(Icons.close,
+                              color: Colors.white, size: 20),
+                          onPressed: () =>
+                              Provider.of<PopupProvider>(context, listen: false)
+                                  .popPopupStack(),
+                        ),
+                      ],
+                    ),
+                  )
+                : const SizedBox(),
+
+            // Body
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Shift Name
+                    CustomTextFormField(
+                      controller: _shiftNameController,
+                      title: 'Shift Name',
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                    ),
+                    const SizedBox(height: 16),
+
+                    CustomTextFormField(
+                      controller: _descriptionController,
+                      title: 'Description',
+                      maxLines: 3,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 🔥 Active / Inactive Toggle
+                    Row(
+                      children: [
+                        // Text(
+                        //   "Shift Active",
+                        //   style: GoogleFonts.poppins(
+                        //     color: Colors.white,
+                        //     fontSize: 14,
+                        //     fontWeight: FontWeight.w500,
+                        //   ),
+                        // ),
+                        // const SizedBox(width: 12),
+                        Switch(
+                          value: _isActive,
+                          activeThumbColor: const Color(0xFF5A67D8),
+                          onChanged: (value) {
+                            setState(() {
+                              _isActive = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          _isActive ? "Active" : "Inactive",
+                          style: GoogleFonts.poppins(
+                            color: _isActive
+                                ? Colors.greenAccent
+                                : Colors.redAccent,
+                            fontSize: 13,
+                          ),
+                        )
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+                    CustomTextFormField(
+                      keyboardType: TextInputType.number,
+                      controller: _bufferTimeController,
+                      title: 'Buffer Time (in minutes)',
+                      autovalidateMode: AutovalidateMode.always,
+                      inputFormatter: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+
+                      // name: 'Buffer Time',
+                      // textFieldEnabled: true,
+                    ),
+                    const SizedBox(height: 16),
+                    // Shift Schedule
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_outlined,
+                          color: Colors.white.withValues(alpha: 0.7),
+                          size: 22,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          "Shift Schedule",
                           style: GoogleFonts.poppins(
                             color: Colors.white,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Week Days
+                    ..._weekDays.asMap().entries.map((entry) {
+                      int index = entry.key;
+                      String day = entry.value;
+                      return buildDaySchedule(day, index);
+                    }),
+
+                    const SizedBox(height: 24),
+
+                    // Add Button
+                    Center(
+                      child: SizedBox(
+                        width: 120,
+                        height: 40,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _saveShift();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5A67D8),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            widget.shiftModel == null ? "Add" : "Update",
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

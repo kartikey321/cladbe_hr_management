@@ -2,10 +2,14 @@ import 'package:cladbe_shared/cladbe_shared.dart';
 import '../route_data/hrscreen_route_data.dart';
 import '../route_data/attendancedashboardscreen_route_data.dart';
 import '../route_data/addholidayscreen_route_data.dart';
+import '../route_data/addnewshiftscreen_route_data.dart';
 
 import '../route_data/demoscreen_route_data.dart';
 
 class Routes extends BaseRoutes {
+  static const RouteData AddNewShiftScreen =
+      AddNewShiftScreenRouteData(name: '/shift-add-screen');
+
   static const RouteData AddHolidayScreen =
       AddHolidayScreenRouteData(name: '/holiday-add-screen');
 
@@ -23,6 +27,7 @@ class Routes extends BaseRoutes {
           Routes.AttendanceDashboardScreen,
           DemoScreen,
           Routes.AddHolidayScreen,
+          Routes.AddNewShiftScreen,
         ]);
 
   // Singleton factory constructor
