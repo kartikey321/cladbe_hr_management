@@ -1,3 +1,4 @@
+import 'package:cladbe_hr_management/src/ui/tablet_desktop/Holiday/add_holiday.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/Hr_screen.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/attendanceDashboard/Attendance_dashboard.dart';
 import 'package:cladbe_shared/cladbe_shared.dart';
@@ -40,6 +41,14 @@ class CustomRouteWidgetGenerator implements RouteWidgetGeneratorBase {
         Routes.HrScreen.name: RouteConfig(
           defaultWidget: (arguments) {
             return const HrScreen();
+          },
+        ),
+        Routes.AddHolidayScreen.name: RouteConfig(
+          defaultWidget: (arguments) {
+            return AddHoliday(
+              holiday: arguments != null ? arguments['holiday'] : null,
+              holidayId: arguments != null ? arguments['holidayId'] : null,
+            );
           },
         ),
         // Additional routes can be added here

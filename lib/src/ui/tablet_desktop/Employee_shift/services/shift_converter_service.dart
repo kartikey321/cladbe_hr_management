@@ -1,13 +1,12 @@
 import 'package:cladbe_shared/cladbe_shared.dart';
-import 'package:cladbe_shared/src/models/Attendance/weekly_shift_model.dart';
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
+
 import '../widget/time_slot_models.dart';
 
-/// Service class to handle conversion between UI models and data models
+/// Converts UI data into model update maps for WeeklyShiftModel.
 class ShiftConverterService {
-  /// Converts UI shift/break data to WeeklyShiftModel
-  static WeeklyShiftModel? convertToModel({
+  /// Converts UI shift/break state into a Map for creating/updating the model
+  static Map<String, dynamic>? convertToMap({
     required String shiftName,
     required String description,
     required List<String> weekDays,
@@ -19,35 +18,31 @@ class ShiftConverterService {
     required String bufferTimeMinutes,
     required bool isActive,
   }) {
-    // Validate shift name
     if (shiftName.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a shift name')),
+        const SnackBar(content: Text("Please enter a shift name")),
       );
       return null;
     }
 
-    final weekSchedule = <WeekDay, DaySchedule>{};
+    final Map<WeekDay, DaySchedule> schedule = {};
 
     for (int i = 0; i < weekDays.length; i++) {
       final dayName = weekDays[i];
       final weekDay = WeekDay.values[i];
-      final isMarkedOff = markAsOff[dayName] ?? false;
-      final options = everyOptions[dayName] ?? [];
+      final isOff = markAsOff[dayName] ?? false;
+      final offs = everyOptions[dayName] ?? [];
 
-      // ❗️VALIDATION: Marked off but no dropdown selected
-      if (isMarkedOff && options.isEmpty) {
+      if (isOff && offs.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Please select at least one off-week option for $dayName')),
+          SnackBar(content: Text("Select an off-week option for $dayName")),
         );
         return null;
       }
 
-      // 🟢 Completely off (Every OR empty)
-      if (isMarkedOff && (options.isEmpty || options.contains('Every'))) {
-        weekSchedule[weekDay] = DaySchedule(
+      // Entire day off (Every or empty)
+      if (isOff && (offs.isEmpty || offs.contains("Every"))) {
+        schedule[weekDay] = DaySchedule(
           day: weekDay,
           isOff: true,
           shifts: [],
@@ -56,7 +51,7 @@ class ShiftConverterService {
         continue;
       }
 
-      // Convert shift times
+      // --- Convert Shifts ---
       final shifts = _convertShiftTimes(
         dayName: dayName,
         dayShifts: dayShifts,
@@ -64,7 +59,7 @@ class ShiftConverterService {
       );
       if (shifts == null) return null;
 
-      // Convert break times
+      // --- Convert Breaks ---
       final breaks = _convertBreakTimes(
         dayName: dayName,
         dayBreaks: dayBreaks,
@@ -72,98 +67,104 @@ class ShiftConverterService {
       );
       if (breaks == null) return null;
 
-      // Marked off only for specific weeks
-      weekSchedule[weekDay] = DaySchedule(
+      schedule[weekDay] = DaySchedule(
         day: weekDay,
         isOff: false,
         shifts: shifts,
         breaks: breaks,
-        offWeeks: isMarkedOff && options.isNotEmpty ? options : null,
+        offWeeks: offs.isNotEmpty ? offs : null,
       );
     }
 
-    return WeeklyShiftModel(
-        id: generateUniqueId(),
-        shiftName: shiftName.trim(),
-        description: description.trim(),
-        weekSchedule: weekSchedule,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        bufferTimeMinutes: bufferTimeMinutes,
-        isActive: isActive);
+    return {
+      "shiftName": shiftName.trim(),
+      "description": description.trim(),
+      "bufferTimeMinutes": bufferTimeMinutes,
+      "isActive": isActive,
+      "weekSchedule": schedule.map((k, v) => MapEntry(k.name, v.toMap())),
+      "updatedAt": DateTime.now(),
+    };
   }
 
-  /// Converts shift time slots to ShiftTime models
+  // ------------------------------------------------------------
+  // SHIFT TIME CONVERSION
+  // ------------------------------------------------------------
   static List<ShiftTime>? _convertShiftTimes({
     required String dayName,
     required Map<String, List<ShiftTimeSlot>> dayShifts,
     required BuildContext context,
   }) {
-    final shifts = <ShiftTime>[];
+    final list = <ShiftTime>[];
 
     for (var slot in dayShifts[dayName]!) {
-      if (slot.startController.text.isNotEmpty &&
-          slot.endController.text.isNotEmpty) {
-        try {
-          final startParts = slot.startController.text.split(':');
-          final endParts = slot.endController.text.split(':');
+      if (slot.startController.text.isEmpty || slot.endController.text.isEmpty)
+        continue;
 
-          shifts.add(ShiftTime(
+      try {
+        final s = slot.startController.text.split(":");
+        final e = slot.endController.text.split(":");
+
+        list.add(
+          ShiftTime(
             startTime: CustomTimeOfDay(
-              hour: int.parse(startParts[0]),
-              minute: int.parse(startParts[1]),
+              hour: int.parse(s[0]),
+              minute: int.parse(s[1]),
             ),
             endTime: CustomTimeOfDay(
-              hour: int.parse(endParts[0]),
-              minute: int.parse(endParts[1]),
+              hour: int.parse(e[0]),
+              minute: int.parse(e[1]),
             ),
-          ));
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Invalid time format for $dayName shift')),
-          );
-          return null;
-        }
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Invalid shift time format for $dayName")),
+        );
+        return null;
       }
     }
 
-    return shifts;
+    return list;
   }
 
-  /// Converts break time slots to BreakTime models
+  // ------------------------------------------------------------
+  // BREAK TIME CONVERSION
+  // ------------------------------------------------------------
   static List<BreakTime>? _convertBreakTimes({
     required String dayName,
     required Map<String, List<BreakTimeSlot>> dayBreaks,
     required BuildContext context,
   }) {
-    final breaks = <BreakTime>[];
+    final list = <BreakTime>[];
 
     for (var slot in dayBreaks[dayName]!) {
-      if (slot.startController.text.isNotEmpty &&
-          slot.endController.text.isNotEmpty) {
-        try {
-          final startParts = slot.startController.text.split(':');
-          final endParts = slot.endController.text.split(':');
+      if (slot.startController.text.isEmpty || slot.endController.text.isEmpty)
+        continue;
 
-          breaks.add(BreakTime(
+      try {
+        final s = slot.startController.text.split(":");
+        final e = slot.endController.text.split(":");
+
+        list.add(
+          BreakTime(
             startTime: CustomTimeOfDay(
-              hour: int.parse(startParts[0]),
-              minute: int.parse(startParts[1]),
+              hour: int.parse(s[0]),
+              minute: int.parse(s[1]),
             ),
             endTime: CustomTimeOfDay(
-              hour: int.parse(endParts[0]),
-              minute: int.parse(endParts[1]),
+              hour: int.parse(e[0]),
+              minute: int.parse(e[1]),
             ),
-          ));
-        } catch (e) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Invalid time format for $dayName break')),
-          );
-          return null;
-        }
+          ),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Invalid break time format for $dayName")),
+        );
+        return null;
       }
     }
 
-    return breaks;
+    return list;
   }
 }

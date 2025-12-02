@@ -21,6 +21,9 @@ class _ShiftManagementState extends State<ShiftManagement> {
 
   Stream<List<WeeklyShiftModel>>? shiftsStream;
   bool isLoading = true;
+  bool isSelected = false;
+  String? selectedShiftId;
+
   @override
   void initState() {
     super.initState();
@@ -115,27 +118,40 @@ class _ShiftManagementState extends State<ShiftManagement> {
                   .map((shift) => Padding(
                         padding: const EdgeInsets.only(bottom: 15.0),
                         child: InkWell(
-                            onTap: () {
-                              Provider.of<PopupProvider>(context, listen: false)
-                                  .pushPopupStack = Popup(
-                                barrierDismissible: true,
-                                id: 'new-shift-popup',
-                                element: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Center(
-                                      child: SizedBox(
-                                    height: MediaQuery.of(context).size.height *
-                                        0.7,
-                                    width:
-                                        MediaQuery.of(context).size.width * 0.5,
-                                    child: AddNewShift(
-                                      shiftModel: shift,
-                                    ),
-                                  )),
-                                ),
-                              );
-                            },
-                            child: ShiftCard(shiftModel: shift)),
+                          onTap: () {
+                            setState(() {
+                              if (selectedShiftId == shift.id) {
+                                selectedShiftId = null;
+                              } else {
+                                selectedShiftId = shift.id;
+                              }
+                            });
+                          },
+                          onDoubleTap: () {
+                            Provider.of<PopupProvider>(context, listen: false)
+                                .pushPopupStack = Popup(
+                              barrierDismissible: true,
+                              id: 'new-shift-popup',
+                              element: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Center(
+                                    child: SizedBox(
+                                  height:
+                                      MediaQuery.of(context).size.height * 0.7,
+                                  width:
+                                      MediaQuery.of(context).size.width * 0.5,
+                                  child: AddNewShift(
+                                    shiftModel: shift,
+                                  ),
+                                )),
+                              ),
+                            );
+                          },
+                          child: ShiftCard(
+                            isSelected: selectedShiftId == shift.id,
+                            shiftModel: shift,
+                          ),
+                        ),
                       ))
                   .toList(),
             );

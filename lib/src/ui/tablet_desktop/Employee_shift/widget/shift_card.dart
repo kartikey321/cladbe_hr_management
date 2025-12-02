@@ -5,12 +5,19 @@ import 'package:hexify/hexify.dart';
 
 class ShiftCard extends StatelessWidget {
   final WeeklyShiftModel shiftModel;
+  final bool isSelected;
 
-  const ShiftCard({super.key, required this.shiftModel});
+  const ShiftCard({
+    super.key,
+    required this.shiftModel,
+    required this.isSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
       height: 162,
       width: 424,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -25,6 +32,16 @@ class ShiftCard extends StatelessWidget {
           color: Hexify(colorCode: '#454545'),
           width: 1,
         ),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: AppDefault.primaryColor.withOpacity(0.4),
+                  blurRadius: 10,
+                  spreadRadius: 1,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

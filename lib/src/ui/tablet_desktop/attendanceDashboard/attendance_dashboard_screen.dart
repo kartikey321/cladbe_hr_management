@@ -222,6 +222,7 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
 
     return Container(
       color: const Color(0xFF14151A),
+      padding: const EdgeInsets.all(8),
       child: StreamBuilder<List<AttendanceLog>>(
         stream: _logsPager!.stream.convertStream(
           converter: (val) => val.expand((e) => e.items).toList(),
@@ -242,6 +243,7 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 24),
                 _buildStatsGrid(attendanceData, allLogs),
                 const SizedBox(height: 24),
                 _buildTodaysAttendanceSection(filteredData),
@@ -270,7 +272,13 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
               ),
               const SizedBox(height: 16),
               StatCard(
-                title: 'Absent',
+                title: 'Present',
+                count: _getPresentEmployees(data).toString(),
+                icon: Icons.check_circle_outline,
+              ),
+              const SizedBox(height: 16),
+              StatCard(
+                title: 'Late',
                 count: _getAbsentEmployees(data).toString(),
                 icon: Icons.person_off_outlined,
               ),
@@ -282,15 +290,21 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
           child: Column(
             children: [
               StatCard(
-                title: 'Present',
-                count: _getPresentEmployees(data).toString(),
-                icon: Icons.check_circle_outline,
-              ),
-              const SizedBox(height: 16),
-              StatCard(
                 title: 'On Break',
                 count: _getOnBreakEmployees(data).toString(),
                 icon: Icons.event_busy_outlined,
+              ),
+              const SizedBox(height: 16),
+              StatCard(
+                title: 'Absent',
+                count: _getAbsentEmployees(data).toString(),
+                icon: Icons.person_off_outlined,
+              ),
+              const SizedBox(height: 16),
+              StatCard(
+                title: 'Partial Shift',
+                count: _getPresentEmployees(data).toString(),
+                icon: Icons.check_circle_outline,
               ),
             ],
           ),

@@ -1,3 +1,4 @@
+import 'package:cladbe_hr_management/src/ui/tablet_desktop/Holiday/Holiday_dashboard.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/attendanceDashboard/Attendance_dashboard.dart';
 import 'package:cladbe_shared/cladbe_shared.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +39,7 @@ class _HrScreenState extends State<HrScreen> {
           padding: const EdgeInsets.all(20.0),
           child: SingleChildScrollView(
             child: CustomAnimatedTabs(
+              indicatorHeight: 10,
               selectedIndex: _selectedIndex,
               onTabSelected: _onTabSelected,
               tabItems: hrFeatures,
@@ -48,11 +50,9 @@ class _HrScreenState extends State<HrScreen> {
                   child: ShiftManagement(),
                 ),
                 Center(
-                  child: Text('Leave Management - Coming Soon'),
-                ),
-                Center(
                   child: Text('Holidays - Coming Soon'),
                 ),
+                HolidayDashboardScreen(),
               ],
             ),
           ),

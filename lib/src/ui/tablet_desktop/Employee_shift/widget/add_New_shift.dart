@@ -83,46 +83,70 @@ class _AddNewShiftState extends State<AddNewShift> with SuperMixin {
       /// MARK AS OFF
       _markAsOff[day] = data.isOff;
 
-      /// EVERY OPTIONS (raw values)
-      _everyOptions[day] = List.from(data.offWeeks ?? []);
+      /// Store raw selected week options coming from DB
+      _everyOptions[day] = List<String>.from(data.offWeeks ?? []);
 
-      /// 🔥 FIXED: Update Dropdown UI State
-      _everyControllers[day]!.clearAllSelection();
+      // ---------------------------------------------------------------
+      // FIXED: Setup dropdown options & restore selected values
+      // ---------------------------------------------------------------
+      final availableOptions = [
+        "Every",
+        "1st",
+        "2nd",
+        "3rd",
+        "4th",
+      ].map((e) => ValueItem(label: e, value: e)).toList();
 
-      if (_everyOptions[day]!.isNotEmpty) {
-        _everyControllers[day]!.setSelectedOptions(
-          _everyOptions[day]!
-              .map((e) => ValueItem(label: e, value: e))
-              .toList(),
-        );
+      final controller = _everyControllers[day]!;
+      controller.setOptions(availableOptions);
+      controller.clearAllSelection();
+
+      final selected = _everyOptions[day]!
+          .map((item) => ValueItem(label: item, value: item))
+          .toList();
+
+      if (selected.isNotEmpty) {
+        controller.setSelectedOptions(selected);
       }
 
-      /// --- REBUILD SHIFTS ---
+      // ---------------------------------------------------------------
+      // REBUILD SHIFT ROWS
+      // ---------------------------------------------------------------
       _dayShifts[day] = [];
+
       for (var sh in data.shifts) {
         var slot = ShiftTimeSlot();
-        slot.startController.text =
-            '${sh.startTime.hour.toString().padLeft(2, '0')}:${sh.startTime.minute.toString().padLeft(2, '0')}';
-        slot.endController.text =
-            '${sh.endTime.hour.toString().padLeft(2, '0')}:${sh.endTime.minute.toString().padLeft(2, '0')}';
+        slot.startController.text = _fmtCustom(sh.startTime);
+        slot.endController.text = _fmtCustom(sh.endTime);
         _dayShifts[day]!.add(slot);
       }
-      if (_dayShifts[day]!.isEmpty) _dayShifts[day]!.add(ShiftTimeSlot());
 
-      /// --- REBUILD BREAKS ---
+      if (_dayShifts[day]!.isEmpty) {
+        _dayShifts[day]!.add(ShiftTimeSlot());
+      }
+
+      // ---------------------------------------------------------------
+      // REBUILD BREAK ROWS
+      // ---------------------------------------------------------------
       _dayBreaks[day] = [];
+
       for (var br in data.breaks) {
         var slot = BreakTimeSlot();
-        slot.startController.text =
-            '${br.startTime.hour.toString().padLeft(2, '0')}:${br.startTime.minute.toString().padLeft(2, '0')}';
-        slot.endController.text =
-            '${br.endTime.hour.toString().padLeft(2, '0')}:${br.endTime.minute.toString().padLeft(2, '0')}';
+        slot.startController.text = _fmtCustom(br.startTime);
+        slot.endController.text = _fmtCustom(br.endTime);
         _dayBreaks[day]!.add(slot);
       }
-      if (_dayBreaks[day]!.isEmpty) _dayBreaks[day]!.add(BreakTimeSlot());
+
+      if (_dayBreaks[day]!.isEmpty) {
+        _dayBreaks[day]!.add(BreakTimeSlot());
+      }
     }
 
     setState(() {});
+  }
+
+  String _fmtCustom(CustomTimeOfDay t) {
+    return '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
   }
 
   void _copyScheduleFromDay(String toDay, String fromDay) {
@@ -160,9 +184,8 @@ class _AddNewShiftState extends State<AddNewShift> with SuperMixin {
     }
   }
 
-  /// Converts UI data to WeeklyShiftModel using the service
-  model.WeeklyShiftModel? _convertToModel() {
-    return ShiftConverterService.convertToModel(
+  Map<String, dynamic>? _convertToModel() {
+    return ShiftConverterService.convertToMap(
       shiftName: _shiftNameController.text,
       description: _descriptionController.text,
       weekDays: _weekDays,
@@ -170,52 +193,66 @@ class _AddNewShiftState extends State<AddNewShift> with SuperMixin {
       dayBreaks: _dayBreaks,
       markAsOff: _markAsOff,
       everyOptions: _everyOptions,
-      isActive: _isActive,
       context: context,
-      bufferTimeMinutes:
-          _bufferTimeController.text.isEmpty ? '0' : _bufferTimeController.text,
+      bufferTimeMinutes: _bufferTimeController.text,
+      isActive: _isActive,
     );
   }
 
   void _saveShift() async {
-    final weeklyShift = _convertToModel();
+    final updateMap = _convertToModel();
+    if (updateMap == null) return;
+
     try {
-      if (weeklyShift == null) return;
+      // ---------------- CREATE ----------------
       if (widget.shiftModel == null) {
-        LoggerService.info(
-            "Converted WeeklyShiftModel: ${weeklyShift.toMap()}");
+        final newShift = WeeklyShiftModel(
+          id: generateUniqueId(),
+          shiftName: updateMap["shiftName"],
+          description: updateMap["description"],
+          weekSchedule:
+              WeeklyShiftModel.parseWeekSchedule(updateMap["weekSchedule"]),
+          bufferTimeMinutes: updateMap["bufferTimeMinutes"],
+          isActive: updateMap["isActive"],
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
 
         await ShiftHelper.addShift(
           companyId: context.getCompanyId(),
-          weeklyShift: weeklyShift,
+          weeklyShift: newShift,
         );
-        showSnackBar(
-          "Shift added successfully",
-          snackBarStatus: SnackBarStatus.success,
-        );
-        Provider.of<PopupProvider>(context, listen: false).popPopupStack();
-      } else {
-        LoggerService.info(
-            "Converted WeeklyShiftModel: ${weeklyShift.toMap()}");
 
-        await ShiftHelper.updateShift(
-          companyId: context.getCompanyId(),
-          weekShiftId: widget.shiftModel!.id,
-          shiftUpdates: weeklyShift.toMap(),
-        );
-        showSnackBar(
-          "Update Shift successfully",
-          snackBarStatus: SnackBarStatus.success,
-        );
+        showSnackBar("Shift added successfully",
+            snackBarStatus: SnackBarStatus.success);
         Provider.of<PopupProvider>(context, listen: false).popPopupStack();
+        return;
       }
-    } catch (e) {
-      LoggerService.error("Error converting shift model: $e");
-      showSnackBar(
-        "Error saving shift:",
-        snackBarStatus: SnackBarStatus.error,
+
+      // ---------------- UPDATE USING copyWith ----------------
+      final updatedShift = widget.shiftModel!.copyWith(
+        shiftName: updateMap["shiftName"],
+        description: updateMap["description"],
+        weekSchedule:
+            WeeklyShiftModel.parseWeekSchedule(updateMap["weekSchedule"]),
+        bufferTimeMinutes: updateMap["bufferTimeMinutes"],
+        isActive: updateMap["isActive"],
+        updatedAt: DateTime.now(),
       );
-      return;
+
+      await ShiftHelper.updateShift(
+        companyId: context.getCompanyId(),
+        weekShiftId: widget.shiftModel!.id,
+        shiftUpdates: updatedShift.toMap(),
+      );
+
+      showSnackBar("Shift updated successfully",
+          snackBarStatus: SnackBarStatus.success);
+
+      Provider.of<PopupProvider>(context, listen: false).popPopupStack();
+    } catch (e) {
+      LoggerService.error("Error saving shift: $e");
+      showSnackBar("Error saving shift", snackBarStatus: SnackBarStatus.error);
     }
   }
 

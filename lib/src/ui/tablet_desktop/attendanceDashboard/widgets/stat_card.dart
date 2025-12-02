@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'gradient_container.dart';
 
@@ -15,9 +17,17 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    List<Color> dotColors = [
+      const Color(0xFF7578CD),
+      const Color(0xFF76FA61),
+    ];
+    Color generator(int index) {
+      return dotColors[index % dotColors.length];
+    }
+
     return GradientContainer(
       width: 261.52,
-      height: 120.45,
+      height: 108.45,
       padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,13 +59,26 @@ class StatCard extends StatelessWidget {
                 ),
             ],
           ),
-          Text(
-            count,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            spacing: 7,
+            children: [
+              Container(
+                height: 8,
+                width: 8,
+                decoration: BoxDecoration(
+                  color: generator(Random().nextInt(2)),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              Text(
+                count,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
         ],
       ),
