@@ -214,8 +214,8 @@ class _AddNewShiftState extends State<AddNewShift> with SuperMixin {
               WeeklyShiftModel.parseWeekSchedule(updateMap["weekSchedule"]),
           bufferTimeMinutes: updateMap["bufferTimeMinutes"],
           isActive: updateMap["isActive"],
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
+          createdAt: ServerTimeService.instance.currentServerTime,
+          updatedAt: ServerTimeService.instance.currentServerTime,
         );
 
         await ShiftHelper.addShift(
@@ -238,7 +238,7 @@ class _AddNewShiftState extends State<AddNewShift> with SuperMixin {
             WeeklyShiftModel.parseWeekSchedule(updateMap["weekSchedule"]),
         bufferTimeMinutes: updateMap["bufferTimeMinutes"],
         isActive: updateMap["isActive"],
-        updatedAt: DateTime.now(),
+        updatedAt: ServerTimeService.instance.currentServerTime,
       );
 
       await ShiftHelper.updateShift(

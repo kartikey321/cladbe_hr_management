@@ -83,12 +83,20 @@ class ShiftCard extends StatelessWidget {
               fontSize: 11,
             ),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 8),
+          Text(
+            "${shiftModel.description}",
+            style: GoogleFonts.poppins(
+              color: Colors.grey.shade400,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 10),
           Container(
             height: 1,
             color: Colors.white.withOpacity(0.1),
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 15),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

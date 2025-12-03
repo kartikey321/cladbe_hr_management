@@ -593,7 +593,8 @@ class _AddHolidayState extends State<AddHoliday> {
                 onPressed: () async {
                   final picked = await showDatePicker(
                     context: context,
-                    initialDate: row.startDate ?? DateTime.now(),
+                    initialDate: row.startDate ??
+                        ServerTimeService.instance.currentServerTime,
                     firstDate: DateTime(2000),
                     lastDate: DateTime(2100),
                   );
@@ -630,7 +631,9 @@ class _AddHolidayState extends State<AddHoliday> {
                 onPressed: () async {
                   final picked = await showDatePicker(
                     context: context,
-                    initialDate: row.endDate ?? row.startDate ?? DateTime.now(),
+                    initialDate: row.endDate ??
+                        row.startDate ??
+                        ServerTimeService.instance.currentServerTime,
                     firstDate: row.startDate ?? DateTime(2000),
                     lastDate: DateTime(2100),
                   );

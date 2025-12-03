@@ -82,7 +82,7 @@ class ShiftConverterService {
       "bufferTimeMinutes": bufferTimeMinutes,
       "isActive": isActive,
       "weekSchedule": schedule.map((k, v) => MapEntry(k.name, v.toMap())),
-      "updatedAt": DateTime.now(),
+      "updatedAt": ServerTimeService.instance.currentServerTime,
     };
   }
 

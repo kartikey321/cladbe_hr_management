@@ -7,6 +7,14 @@ class ShiftHelper {
     return WeeklyShiftContoller(companyId: companyId).getData();
   }
 
+  // static Future<WeeklyShiftModel> getSingleShift({
+  //   required String companyId,
+  //   required String shiftId,
+  // }) {
+  //   return WeeklyShiftContoller(companyId: companyId)
+  //       .getSingleDocument(shiftId);
+  // }
+
   static Future<void> addShift(
       {required String companyId,
       required WeeklyShiftModel weeklyShift}) async {

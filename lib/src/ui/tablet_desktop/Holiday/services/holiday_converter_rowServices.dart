@@ -184,8 +184,8 @@ class HolidayConverter {
       leaves: leaves,
       occasions: occasions,
       totalOccassionsHolidays: totalDays.toString(),
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+      createdAt: ServerTimeService.instance.currentServerTime,
+      updatedAt: ServerTimeService.instance.currentServerTime,
     );
   }
 }
