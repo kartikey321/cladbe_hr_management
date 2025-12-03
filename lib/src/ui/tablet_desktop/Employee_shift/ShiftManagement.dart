@@ -121,24 +121,31 @@ class _ShiftManagementState extends State<ShiftManagement> {
                             });
                           },
                           onDoubleTap: () {
-                            Provider.of<PopupProvider>(context, listen: false)
-                                .pushPopupStack = Popup(
-                              barrierDismissible: true,
-                              id: 'new-shift-popup',
-                              element: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Center(
-                                    child: SizedBox(
-                                  height:
-                                      MediaQuery.of(context).size.height * 0.7,
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.5,
-                                  child: AddNewShift(
-                                    shiftModel: shift,
-                                  ),
-                                )),
-                              ),
+                            NavigatorHelper.navigateTo(
+                              context,
+                              Routes.AddNewShiftScreen,
+                              {
+                                'shiftModel': shift,
+                              },
                             );
+                            // Provider.of<PopupProvider>(context, listen: false)
+                            //     .pushPopupStack = Popup(
+                            //   barrierDismissible: true,
+                            //   id: 'new-shift-popup',
+                            //   element: Padding(
+                            //     padding: const EdgeInsets.all(8.0),
+                            //     child: Center(
+                            //         child: SizedBox(
+                            //       height:
+                            //           MediaQuery.of(context).size.height * 0.7,
+                            //       width:
+                            //           MediaQuery.of(context).size.width * 0.5,
+                            //       child: AddNewShift(
+                            //         shiftModel: shift,
+                            //       ),
+                            //     )),
+                            //   ),
+                            // );
                           },
                           child: ShiftCard(
                             isSelected: selectedShiftId == shift.id,

@@ -32,13 +32,14 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
   LivePager<AttendanceLog>? _logsPager;
   String selectedStatusFilter = 'All';
   final statusFilters = ['All', 'Present', 'Absent', 'Late'];
-
+  static const int exitBufferMinutes = 15;
   // --- SHIFT CACHE (id -> WeeklyShiftModel) ---
   final Map<String, WeeklyShiftModel> _shiftsById = {};
 
   // default fallback shift id when employee.shiftId is missing
   static const String _defaultFallbackShiftId =
       '8f1074fd-6628-433a-80fd-370415333925';
+  OverlayEntry? _tooltipOverlay;
 
   @override
   void initState() {
@@ -173,6 +174,58 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
         }
       }
     }
+// -------------------------------------------------------------
+//                ✔ PARTIAL SHIFT DETECTION
+// -------------------------------------------------------------
+    bool isPartialShift = false;
+
+    if (checkInLog != null && checkOutLog != null) {
+      final shiftId = employee.shiftId?.isNotEmpty == true
+          ? employee.shiftId!
+          : _defaultFallbackShiftId;
+
+      final shift = _shiftsById[shiftId];
+
+      if (shift != null) {
+        final daySchedule = shift.weekSchedule[weekDay];
+
+        if (daySchedule != null && daySchedule.shifts.isNotEmpty) {
+          final s = daySchedule.shifts.first;
+
+          // Shift start datetime (IST)
+          final shiftStartIST = DateTime(
+            _selectedDate.year,
+            _selectedDate.month,
+            _selectedDate.day,
+            s.startTime.hour,
+            s.startTime.minute,
+          );
+
+          // Full shift duration in minutes
+          final fullShiftMinutes = (s.durationInHours * 60).round();
+
+          // Allowed checkout = full duration - buffer
+          final allowedCheckoutIST = shiftStartIST.add(
+            Duration(
+              minutes: fullShiftMinutes - exitBufferMinutes,
+            ),
+          );
+
+          final checkoutIST = checkOutLog.timestamp.toLocal();
+
+          if (checkoutIST.isBefore(allowedCheckoutIST)) {
+            isPartialShift = true;
+          }
+
+          debugPrint("=== PARTIAL SHIFT CHECK ===");
+          debugPrint("Shift Start: $shiftStartIST");
+          debugPrint("Full Minutes: $fullShiftMinutes");
+          debugPrint("Allowed Checkout: $allowedCheckoutIST");
+          debugPrint("Actual Checkout: $checkoutIST");
+          debugPrint("Partial: $isPartialShift");
+        }
+      }
+    }
 
     return EmployeeAttendanceData(
       employee: employee,
@@ -185,7 +238,7 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
           ? DateFormat('h:mm a').format(checkOutLog.timestamp)
           : null,
       totalTime: totalTime,
-      isLate: isLate,
+      isLate: isLate, isPartialShift: isPartialShift, // NEW
     );
   }
 
@@ -237,6 +290,9 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
     // Compare the times
     return checkInTimeOnly.isAfter(allowedCheckInTime);
   }
+
+  int _getPartialShiftEmployees(List<EmployeeAttendanceData> data) =>
+      data.where((d) => d.isPartialShift).length;
 
   // Apply search + status filters
   List<EmployeeAttendanceData> _applyFilters(
@@ -360,59 +416,283 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
     );
   }
 
+  List<String> _getEmployeeNamesByStatus(
+      List<EmployeeAttendanceData> data, String status) {
+    switch (status.toLowerCase()) {
+      case 'late':
+        return data.where((d) => d.isLate).map((d) => d.employee.name).toList();
+
+      case 'present':
+        return data
+            .where((d) =>
+                d.status.toLowerCase() == 'present' ||
+                d.status.toLowerCase() == 'checked out')
+            .map((d) => d.employee.name)
+            .toList();
+
+      case 'absent':
+        return data
+            .where((d) => d.status.toLowerCase() == 'absent')
+            .map((d) => d.employee.name)
+            .toList();
+
+      case 'on break':
+        return data
+            .where((d) => d.status.toLowerCase() == 'on break')
+            .map((d) => d.employee.name)
+            .toList();
+
+      case 'partial shift':
+        return data
+            .where((d) => d.isPartialShift == true)
+            .map((d) => d.employee.name)
+            .toList();
+
+      default:
+        return [];
+    }
+  }
+
+  Widget _statCardWithTooltip({
+    required String title,
+    required String count,
+    required IconData icon,
+    required List<String> names,
+  }) {
+    final key = GlobalKey();
+
+    return GestureDetector(
+      key: key,
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        final renderBox = key.currentContext!.findRenderObject() as RenderBox;
+        final offset = renderBox.localToGlobal(Offset.zero);
+        final size = renderBox.size;
+
+        final rect = Rect.fromLTWH(
+          offset.dx,
+          offset.dy,
+          size.width,
+          size.height,
+        );
+
+        _showTooltip(
+          context,
+          rect,
+          title: title,
+          names: names,
+        );
+      },
+      child: StatCard(
+        title: title,
+        count: count,
+        icon: icon,
+      ),
+    );
+  }
+
   Widget _buildStatsGrid(
       List<EmployeeAttendanceData> data, List<AttendanceLog> allLogs) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 19,
       children: [
-        Expanded(
-          flex: 0,
-          child: Column(children: [
-            StatCard(
-                title: 'Total',
-                count: _getTotalEmployees(data).toString(),
-                icon: Icons.people_outline),
+        // ===================== LEFT COLUMN =========================
+        Column(
+          children: [
+            _statCardWithTooltip(
+              title: "Total",
+              count: _getTotalEmployees(data).toString(),
+              icon: Icons.people_outline,
+              names: data.map((d) => d.employee.name).toList(),
+            ),
             const SizedBox(height: 16),
-            StatCard(
-                title: 'Present',
-                count: _getPresentEmployees(data).toString(),
-                icon: Icons.check_circle_outline),
+            _statCardWithTooltip(
+              title: "Present",
+              count: _getPresentEmployees(data).toString(),
+              icon: Icons.check_circle_outline,
+              names: _getEmployeeNamesByStatus(data, "present"),
+            ),
             const SizedBox(height: 16),
-            StatCard(
-                title: 'Late',
-                count: data.where((d) => d.isLate).length.toString(),
-                icon: Icons.warning_amber_rounded),
-          ]),
+            _statCardWithTooltip(
+              title: "Late",
+              count: data.where((d) => d.isLate).length.toString(),
+              icon: Icons.warning_amber_rounded,
+              names: _getEmployeeNamesByStatus(data, "late"),
+            ),
+          ],
         ),
-        Expanded(
-          flex: 0,
-          child: Column(children: [
-            StatCard(
-                title: 'On Break',
-                count: _getOnBreakEmployees(data).toString(),
-                icon: Icons.event_busy_outlined),
+
+        const SizedBox(width: 20),
+
+        // ===================== RIGHT COLUMN =========================
+        Column(
+          children: [
+            _statCardWithTooltip(
+              title: "On Break",
+              count: _getOnBreakEmployees(data).toString(),
+              icon: Icons.event_busy_outlined,
+              names: _getEmployeeNamesByStatus(data, "on break"),
+            ),
             const SizedBox(height: 16),
-            StatCard(
-                title: 'Absent',
-                count: _getAbsentEmployees(data).toString(),
-                icon: Icons.person_off_outlined),
+            _statCardWithTooltip(
+              title: "Absent",
+              count: _getAbsentEmployees(data).toString(),
+              icon: Icons.person_off_outlined,
+              names: _getEmployeeNamesByStatus(data, "absent"),
+            ),
             const SizedBox(height: 16),
-            StatCard(
-                title: 'Partial Shift',
-                count: _getPresentEmployees(data).toString(),
-                icon: Icons.check_circle_outline),
-          ]),
+            _statCardWithTooltip(
+              title: "Partial Shift",
+              count: _getPartialShiftEmployees(data).toString(),
+              icon: Icons.access_time,
+              names: _getEmployeeNamesByStatus(data, "partial shift"),
+            ),
+          ],
         ),
+
+        const SizedBox(width: 20),
+
+        // ===================== CHART COLUMN =========================
         Expanded(
-          flex: 2,
+          flex: 1,
           child: GradientContainer(
-              height: 360.9,
-              padding: const EdgeInsets.all(20),
-              child: _buildChart(allLogs)),
+            height: 360,
+            padding: const EdgeInsets.all(20),
+            child: _buildChart(allLogs),
+          ),
         ),
       ],
     );
+  }
+
+  void _showTooltip(
+    BuildContext context,
+    Rect targetPos, {
+    required String title,
+    required List<String> names,
+  }) {
+    _hideTooltip(); // remove previous overlay
+
+    final overlay = Overlay.of(context);
+    final screen = MediaQuery.of(context).size;
+
+    const maxHeight = 260.0;
+    final width = screen.width < 420 ? screen.width * 0.75 : 280.0;
+
+    double left = targetPos.left + 50;
+    double top = targetPos.top - 50;
+
+    // If tooltip goes out of right side → show on left
+    if (left + width > screen.width - 12) {
+      left = targetPos.left - width - 12;
+    }
+
+    // Left screen clamp
+    if (left < 12) left = 12;
+
+    // Adjust if bottom is overflowing
+    final overflow = (top + maxHeight + 30) - screen.height;
+    if (overflow > 0) {
+      top -= overflow + 20;
+    }
+    if (top < 12) top = 12;
+
+    _tooltipOverlay = OverlayEntry(
+      builder: (_) {
+        return Stack(
+          children: [
+            // Tap outside to close
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: _hideTooltip,
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+
+            // Tooltip bubble
+            Positioned(
+              left: left,
+              top: top,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  width: width,
+                  constraints: const BoxConstraints(maxHeight: maxHeight),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1C1D23),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF3A3B43)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.35),
+                        blurRadius: 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 12),
+                      names.isEmpty
+                          ? const Text("No employees",
+                              style: TextStyle(
+                                  color: Color(0xFF8B8D97), fontSize: 14))
+                          : Expanded(
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  children: names.map((name) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 4),
+                                      child: Row(
+                                        children: [
+                                          const CircleAvatar(
+                                            radius: 10,
+                                            backgroundColor: Color(0xFF5E7CE2),
+                                            child: Icon(Icons.person,
+                                                size: 12, color: Colors.white),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              name,
+                                              style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 14),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    overlay.insert(_tooltipOverlay!);
+  }
+
+  void _hideTooltip() {
+    _tooltipOverlay?.remove();
+    _tooltipOverlay = null;
   }
 
   Widget _buildChart(List<AttendanceLog> allLogs) {
@@ -450,17 +730,18 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
                 textStyle: const TextStyle(color: Colors.white)),
             series: <CartesianSeries>[
               StackedColumnSeries<WeeklyAttendanceData, String>(
-                  dataSource: weeklyData,
-                  xValueMapper: (d, _) => d.day,
-                  yValueMapper: (d, _) => d.present,
-                  name: 'Present',
-                  color: const Color(0xFF5E7CE2)),
+                dataSource: weeklyData,
+                xValueMapper: (d, _) => d.day,
+                yValueMapper: (d, _) => d.present,
+                name: 'Present',
+                color: const Color(0xFF454890),
+              ),
               StackedColumnSeries<WeeklyAttendanceData, String>(
                   dataSource: weeklyData,
                   xValueMapper: (d, _) => d.day,
                   yValueMapper: (d, _) => d.absent,
                   name: 'Absent',
-                  color: const Color(0xFFFF6B6B),
+                  color: const Color(0xFFFF3B30).withOpacity(0.9),
                   borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(4),
                       topRight: Radius.circular(4))),

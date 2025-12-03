@@ -2,12 +2,13 @@ import 'package:cladbe_shared/cladbe_shared.dart';
 
 class EmployeeAttendanceData {
   final Employee employee;
-  final AttendanceLog? log; // the primary log (check-in) or null
+  final AttendanceLog? log;
   final String status;
   final String? checkInTime;
   final String? checkOutTime;
   final String? totalTime;
   final bool isLate;
+  final bool isPartialShift; // NEW
 
   EmployeeAttendanceData({
     required this.employee,
@@ -17,5 +18,6 @@ class EmployeeAttendanceData {
     required this.checkOutTime,
     required this.totalTime,
     this.isLate = false,
+    this.isPartialShift = false, // NEW
   });
 }

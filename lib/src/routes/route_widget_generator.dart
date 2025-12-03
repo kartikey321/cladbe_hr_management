@@ -46,7 +46,9 @@ class CustomRouteWidgetGenerator implements RouteWidgetGeneratorBase {
         ),
         Routes.AddNewShiftScreen.name: RouteConfig(
           defaultWidget: (arguments) {
-            return const AddNewShift();
+            return AddNewShift(
+              shiftModel: arguments != null ? arguments['shiftModel'] : null,
+            );
           },
         ),
         Routes.AddHolidayScreen.name: RouteConfig(
