@@ -471,51 +471,147 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
     );
   }
 
+  Widget _buildDateSwitcher() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // ← Previous Day
+        InkWell(
+          onTap: () {
+            setState(() {
+              _selectedDate = _selectedDate.subtract(const Duration(days: 1));
+            });
+          },
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFF2C2D35),
+            ),
+            child: const Icon(Icons.arrow_left, color: Colors.white, size: 26),
+          ),
+        ),
+
+        const SizedBox(width: 20),
+
+        // 📅 Center Date (Tap to Pick Date)
+        InkWell(
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: _selectedDate,
+              firstDate: DateTime(2020),
+              lastDate: ServerTimeService.instance.currentServerTime,
+              builder: (context, child) {
+                return Theme(
+                  data: ThemeData.dark().copyWith(
+                    colorScheme: const ColorScheme.dark(
+                      primary: Color(0xFF5E7CE2),
+                      onPrimary: Colors.white,
+                      surface: Color(0xFF2C2D35),
+                      onSurface: Colors.white,
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+            if (picked != null) setState(() => _selectedDate = picked);
+          },
+          child: Text(
+            DateFormat('d MMM yyyy').format(_selectedDate),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+
+        const SizedBox(width: 20),
+
+        // → Next Day
+        InkWell(
+          onTap: () {
+            setState(() {
+              final today = ServerTimeService.instance.currentServerTime;
+              final onlyToday = DateTime(today.year, today.month, today.day);
+
+              if (_selectedDate.isBefore(onlyToday)) {
+                _selectedDate = _selectedDate.add(const Duration(days: 1));
+              }
+            });
+          },
+          borderRadius: BorderRadius.circular(30),
+          child: Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFF2C2D35),
+            ),
+            child: const Icon(Icons.arrow_right, color: Colors.white, size: 26),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTodaysAttendanceSection(
       List<EmployeeAttendanceData> filteredData) {
     return GradientContainer(
       padding: const EdgeInsets.all(24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Row(children: [
-            Text(DateFormat('d MMM yyyy').format(_selectedDate),
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(width: 16),
-            _buildChangeDateButton(),
-          ]),
-          // search
-          Container(
-            width: 300,
-            height: 40,
-            decoration: BoxDecoration(
-                color: const Color(0xFF2C2D35),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF3A3B43), width: 1)),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (query) => setState(() {}),
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: const InputDecoration(
-                  hintText: 'Search',
-                  hintStyle: TextStyle(color: Color(0xFF8B8D97), fontSize: 14),
-                  prefixIcon:
-                      Icon(Icons.search, color: Color(0xFF8B8D97), size: 20),
-                  border: InputBorder.none,
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 10)),
-            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildDateSwitcher(), // ⬅ NEW DATE SWITCHER
+              const SizedBox(height: 24),
+              // SEARCH BOX
+              Container(
+                width: 400,
+                height: 40,
+                padding: const EdgeInsets.only(left: 18, right: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFFFF).withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppDefault.bordercolor,
+                    width: 0.57,
+                  ),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (query) => setState(() {}),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Search',
+                    hintStyle: GoogleFonts.poppins(
+                      color: const Color(0xFF8B8D97),
+                      fontWeight: FontWeight.w300,
+                      fontSize: 15,
+                    ),
+                    suffixIcon: const Icon(
+                      Icons.search_outlined,
+                      color: Color(0xFF8B8D97),
+                    ),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 16),
+              _buildStatusFilters(),
+            ],
           ),
-          Row(children: [
-            const SizedBox(width: 16),
-            _buildStatusFilters(),
-          ]),
-        ]),
-        const SizedBox(height: 24),
-        AttendanceTable(attendanceData: filteredData),
-      ]),
+          const SizedBox(height: 24),
+          AttendanceTable(attendanceData: filteredData),
+        ],
+      ),
     );
   }
 
@@ -559,32 +655,43 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
   }
 
   Widget _buildStatusFilters() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-          color: const Color(0xFF2C2D35),
+    return Flexible(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+        decoration: BoxDecoration(
+          // color: const Color(0xFF2C2D35),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFF3A3B43), width: 1)),
-      child: Row(
-          children: statusFilters.map((filter) {
-        final bool isSelected = selectedStatusFilter == filter;
-        return GestureDetector(
-          onTap: () => setState(() => selectedStatusFilter = filter),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            decoration: BoxDecoration(
-                color:
-                    isSelected ? const Color(0xFF5E7CE2) : Colors.transparent,
-                borderRadius: BorderRadius.circular(6)),
-            child: Text(filter,
-                style: TextStyle(
-                    color: isSelected ? Colors.white : const Color(0xFF8B8D97),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600)),
-          ),
-        );
-      }).toList()),
+          // border: Border.all(color: const Color(0xFF3A3B43), width: 1),
+        ),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: statusFilters.map((filter) {
+                final bool isSelected = selectedStatusFilter == filter;
+                return GestureDetector(
+                  onTap: () => setState(() => selectedStatusFilter = filter),
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFF5E7CE2)
+                            : const Color(0xFFFFFFFF).withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(6)),
+                    child: Text(filter,
+                        style: GoogleFonts.poppins(
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF9D9D9D),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400)),
+                  ),
+                );
+              }).toList()),
+        ),
+      ),
     );
   }
 }
