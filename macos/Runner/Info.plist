@@ -28,5 +28,11 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>This app needs access to save files to your Downloads folder.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>This app needs to save exported attendance reports.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>This app saves Excel reports to your Downloads folder.</string>
 </dict>
 </plist>

@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:cladbe_hr_management/src/Helpers/attendance_log_helper.dart';
 import 'package:cladbe_hr_management/src/Helpers/shift_helper.dart';
 import 'package:cladbe_hr_management/src/models/EmployeeAttendanceData.dart';
+import 'package:cladbe_hr_management/src/ui/tablet_desktop/attendanceDashboard/exportAttendance.dart';
 import 'package:flutter/material.dart';
 import 'package:cladbe_shared/cladbe_shared.dart';
 import 'package:cladbe_shared/sql_client.dart';
@@ -10,6 +13,7 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'widgets/gradient_container.dart';
 import 'widgets/stat_card.dart';
 import 'widgets/attendance_table.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AttendanceDashboardScreen extends StatefulWidget {
   final List<Employee> employees;
@@ -40,6 +44,7 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
   static const String _defaultFallbackShiftId =
       '8f1074fd-6628-433a-80fd-370415333925';
   OverlayEntry? _tooltipOverlay;
+  List<EmployeeAttendanceData> allAttendanceData = [];
 
   @override
   void initState() {
@@ -348,6 +353,114 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
     return weeklyData;
   }
 
+  /// Build attendance for ANY date range, not just selected date
+  List<EmployeeAttendanceData> buildAttendanceForDateRange(
+    List<Employee> employees,
+    List<AttendanceLog> allLogs,
+    DateTime start,
+    DateTime end,
+  ) {
+    List<EmployeeAttendanceData> results = [];
+
+    // Expand date range day-by-day
+    for (DateTime date = start;
+        !date.isAfter(end);
+        date = date.add(const Duration(days: 1))) {
+      final dailyLogs = allLogs.where((log) {
+        return log.timestamp.year == date.year &&
+            log.timestamp.month == date.month &&
+            log.timestamp.day == date.day;
+      }).toList();
+
+      // Map logs by employee
+      final Map<String, List<AttendanceLog>> empMap = {};
+      for (var log in dailyLogs) {
+        empMap.putIfAbsent(log.employeeId, () => []);
+        empMap[log.employeeId]!.add(log);
+      }
+
+      // Build data for each employee for this date
+      for (final emp in employees) {
+        final logs = empMap[emp.id] ?? [];
+        final data = _createEmployeeAttendanceDataForDate(emp, logs, date);
+        results.add(data);
+      }
+    }
+
+    return results;
+  }
+
+  EmployeeAttendanceData _createEmployeeAttendanceDataForDate(
+    Employee employee,
+    List<AttendanceLog> logs,
+    DateTime date,
+  ) {
+    final weekDay = WeekDay.values[(date.weekday - 1) % 7];
+
+    if (logs.isEmpty) {
+      return EmployeeAttendanceData(
+        employee: employee,
+        log: null,
+        status: 'Absent',
+        checkInTime: null,
+        checkOutTime: null,
+        totalTime: null,
+        isLate: false,
+      );
+    }
+
+    logs.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    final checkInLog =
+        logs.firstWhereOrNull((log) => log.eventType == 'check-in');
+    final checkOutLog =
+        logs.lastWhereOrNull((log) => log.eventType == 'check-out');
+
+    final status = checkOutLog != null
+        ? 'Checked Out'
+        : (checkInLog != null ? 'Present' : 'On Break');
+
+    String? totalTime;
+    if (checkInLog != null && checkOutLog != null) {
+      final duration = checkOutLog.timestamp.difference(checkInLog.timestamp);
+      totalTime = '${duration.inHours}h ${duration.inMinutes.remainder(60)}m';
+    }
+
+    bool isLate = false;
+    if (checkInLog != null) {
+      final shiftId = employee.shiftId ?? _defaultFallbackShiftId;
+      final shift = _shiftsById[shiftId];
+
+      if (shift != null) {
+        final daySchedule = shift.weekSchedule[weekDay];
+        if (daySchedule != null && daySchedule.shifts.isNotEmpty) {
+          final s = daySchedule.shifts.first;
+
+          isLate = _isLate(
+            checkInTime: checkInLog.timestamp,
+            shiftStartTime: s.startTime,
+            bufferTimeMinutes: shift.bufferTimeMinutes,
+            date: date,
+          );
+        }
+      }
+    }
+
+    return EmployeeAttendanceData(
+      employee: employee,
+      log: checkInLog ?? logs.first,
+      status: status,
+      checkInTime: checkInLog != null
+          ? DateFormat('h:mm a').format(checkInLog.timestamp)
+          : null,
+      checkOutTime: checkOutLog != null
+          ? DateFormat('h:mm a').format(checkOutLog.timestamp)
+          : null,
+      totalTime: totalTime,
+      isLate: isLate,
+    );
+  }
+
   void _onDateChanged(DateTime newDate) {
     setState(() {
       _selectedDate = newDate;
@@ -391,6 +504,8 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
           final attendanceData = _buildAttendanceData(allLogs);
           final filteredData = _applyFilters(attendanceData);
 
+// ADD THIS LINE:
+          allAttendanceData = attendanceData;
           return SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -398,13 +513,28 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
                 const SizedBox(height: 24),
                 _buildStatsGrid(attendanceData, allLogs),
                 const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.only(left: 10),
-                  child: Text(
-                    "Overall Attendance",
-                    style: GoogleFonts.poppins(
-                        fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
+                Row(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 10),
+                      child: Text(
+                        "Overall Attendance",
+                        style: GoogleFonts.poppins(
+                            fontSize: 16, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () => _showDateRangePicker(context, allLogs),
+                      icon: const Icon(Icons.download, size: 18),
+                      label: const Text("Export by Date Range"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5E7CE2),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
                 _buildTodaysAttendanceSection(filteredData),
@@ -414,6 +544,42 @@ class _AttendanceDashboardScreenState extends State<AttendanceDashboardScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _showDateRangePicker(
+      BuildContext context, List<AttendanceLog> allLogs) async {
+    DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      initialDateRange: DateTimeRange(
+        start: DateTime.now().subtract(const Duration(days: 7)),
+        end: DateTime.now(),
+      ),
+    );
+
+    if (picked != null) {
+      final fullData = buildAttendanceForDateRange(
+        widget.employees,
+        allLogs,
+        picked.start,
+        picked.end,
+      );
+
+      if (fullData.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("No attendance data in selected range")),
+        );
+        return;
+      }
+
+      attendanceDownload.exportToExcelWithDateRange(
+        fullData,
+        context,
+        picked.start,
+        picked.end,
+      );
+    }
   }
 
   List<String> _getEmployeeNamesByStatus(
