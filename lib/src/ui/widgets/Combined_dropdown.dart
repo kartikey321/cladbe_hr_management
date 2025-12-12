@@ -101,8 +101,16 @@ class CombinedDropdownField extends StatelessWidget {
                               .toList()
                           : [],
                       onOptionSelected: (values) {
-                        if (values.isNotEmpty && onRightSelected != null) {
-                          onRightSelected!(values.first);
+                        if (values.isEmpty) return;
+
+                        String selected = values.first;
+
+                        if (onRightSelected != null) onRightSelected!(selected);
+                        if (onRightChanged != null) onRightChanged!(selected);
+                      },
+                      onChanged: (val) {
+                        if (val.isNotEmpty && onRightSelected != null) {
+                          onRightSelected!(val);
                         }
                       },
                       name: null,

@@ -1,10 +1,8 @@
-import 'package:cladbe_hr_management/src/Helpers/holidays_helper.dart';
 import 'package:cladbe_hr_management/src/ui/widgets/CustomPopUpMenu.dart';
 import 'package:cladbe_shared/cladbe_shared.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hexify/hexify.dart';
-import 'package:cladbe_shared/src/models/Attendance/Holiday/holiday.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 
 class HolidayCard extends StatefulWidget {

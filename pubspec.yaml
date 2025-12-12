@@ -31,12 +31,18 @@ dependency_overrides:
   geolocator: ^14.0.2
   cladbe_shared:
     path: ../cladbe_shared_main/
+  cladbe_shared_models:
+    path: ../cladbe_shared_models
 dependencies:
   flutter:
     sdk: flutter
   cladbe_shared:
     git:
       url: https://github.com/amiltus/cladbe_shared.git
+      ref: main
+  cladbe_approval:
+    git:
+      url: https://github.com/amiltus/cladbe_approval.git
       ref: main
 
   # The following adds the Cupertino Icons font to your application.

@@ -1,0 +1,24 @@
+name: cladbe_hr_management_approval_functions
+description: A sample command-line application.
+version: 1.0.0
+# repository: https://github.com/my_org/my_repo
+
+environment:
+  sdk: ^3.10.0
+
+# Add regular dependencies here.
+dependencies:
+  cladbe_shared_models:
+    git:
+      url: https://github.com/kartikey321/cladbe_shared_models
+      ref: main
+  cladbe_approval_functions:
+    git:
+      url: https://github.com/kartikey321/cladbe_approval_functions.git
+      ref: main
+  logging: ^1.2.0
+  dart_firebase_admin: ^0.4.1
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6

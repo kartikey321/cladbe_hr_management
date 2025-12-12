@@ -1,4 +1,3 @@
-import 'package:cladbe_hr_management/src/Helpers/holidays_helper.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/Holiday/services/holiday_converter_rowServices.dart';
 import 'package:cladbe_hr_management/src/ui/widgets/Combined_dropdown.dart';
 import 'package:cladbe_hr_management/src/ui/widgets/dropdownTextfield.dart';
@@ -9,7 +8,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:hexify/hexify.dart';
 import 'package:intl/intl.dart';
-import 'package:cladbe_shared/src/models/Attendance/Holiday/holiday.dart';
 
 class AddHoliday extends StatefulWidget {
   final HolidayModel? holiday;
@@ -456,6 +454,18 @@ class _AddHolidayState extends State<AddHoliday> {
                       rightTextController: row.leaveNameController,
                       rightItems:
                           LeaveName.values.map((e) => e.displayName).toList(),
+                      onRightChanged: (String leaveName) {
+                        LeaveName parsed = LeaveName.fromString(leaveName);
+
+                        row.selectedLeaveName = parsed;
+
+                        if (parsed == LeaveName.custom) {
+                          row.customLeaveName =
+                              leaveName; // store the typed text
+                        } else {
+                          row.customLeaveName = null; // clear if predefined
+                        }
+                      },
                       onRightSelected: (name) {
                         setState(() {
                           row.selectedLeaveName = LeaveName.values.firstWhere(

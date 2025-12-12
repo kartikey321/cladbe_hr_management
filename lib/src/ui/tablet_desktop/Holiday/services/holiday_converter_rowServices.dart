@@ -1,10 +1,10 @@
 import 'package:cladbe_shared/cladbe_shared.dart';
 import 'package:flutter/material.dart';
-import 'package:cladbe_shared/src/models/Attendance/Holiday/holiday.dart';
 
 class LeaveRow {
   MultiSelectController leaveTypeController = MultiSelectController();
   LeaveType? selectedLeaveType;
+  String? customLeaveName; // <── store typed name
 
   /// Right side suggestion field
   TextEditingController leaveNameController = TextEditingController();
@@ -151,7 +151,11 @@ class HolidayConverter {
       leaves.add(
         LeaveModel(
           type: row.selectedLeaveType!,
-          leaveName: row.selectedLeaveName!.displayName,
+          leaveName: row.selectedLeaveName == LeaveName.custom
+              ? (row.customLeaveName?.trim().isNotEmpty == true
+                  ? row.customLeaveName!.trim()
+                  : "Custom Leave")
+              : row.selectedLeaveName!.displayName,
           transferable: row.transferable,
           amountOfDays: int.tryParse(row.daysController.text) ?? 0,
         ),

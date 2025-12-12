@@ -1,4 +1,3 @@
-import 'package:cladbe_hr_management/src/Helpers/shift_helper.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/Employee_shift/services/shift_converter_service.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/Employee_shift/widget/time_slot_models.dart';
 import 'package:cladbe_hr_management/src/ui/widgets/timePicker.dart';
@@ -8,8 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hexify/hexify.dart';
 import 'package:provider/provider.dart';
-import 'package:cladbe_shared/src/models/Attendance/weekly_shift_model.dart'
-    as model;
 
 class AddNewShift extends StatefulWidget {
   final WeeklyShiftModel? shiftModel;
@@ -70,7 +67,7 @@ class _AddNewShiftState extends State<AddNewShift> with SuperMixin {
     }
   }
 
-  void _loadExistingShift(model.WeeklyShiftModel s) {
+  void _loadExistingShift(WeeklyShiftModel s) {
     _shiftNameController.text = s.shiftName;
     _descriptionController.text = s.description ?? '';
     _bufferTimeController.text = s.bufferTimeMinutes;

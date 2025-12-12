@@ -1,5 +1,6 @@
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/Holiday/Holiday_dashboard.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/attendanceDashboard/Attendance_dashboard.dart';
+import 'package:cladbe_hr_management/src/ui/tablet_desktop/leave_management.dart/leaveManagement_screen.dart';
 import 'package:cladbe_shared/cladbe_shared.dart';
 import 'package:flutter/material.dart';
 import 'Employee_shift/ShiftManagement.dart';
@@ -50,7 +51,7 @@ class _HrScreenState extends State<HrScreen> {
                   child: ShiftManagement(),
                 ),
                 Center(
-                  child: Text('Holidays - Coming Soon'),
+                  child: LeaveManagementScreen(),
                 ),
                 HolidayDashboardScreen(),
               ],

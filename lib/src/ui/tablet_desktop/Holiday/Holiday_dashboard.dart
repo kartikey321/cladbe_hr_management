@@ -1,10 +1,8 @@
-import 'package:cladbe_hr_management/src/Helpers/holidays_helper.dart';
 import 'package:cladbe_hr_management/src/routes/route_config/route_names.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/Holiday/add_holiday.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/Holiday/widgets/holiday_card.dart';
 import 'package:cladbe_hr_management/src/ui/tablet_desktop/attendanceDashboard/widgets/stat_card.dart';
 import 'package:cladbe_shared/cladbe_shared.dart';
-import 'package:cladbe_shared/src/models/Attendance/Holiday/holiday.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hexify/hexify.dart';

@@ -130,7 +130,6 @@ class _DropDownSuggestionTextFieldState
                     return InkWell(
                       onTap: () {
                         _controller.text = item;
-                        widget.onSelected?.call(item);
                         widget.onChanged?.call(item);
                         _hideDropdown();
                         _focusNode.unfocus();
@@ -182,11 +181,12 @@ class _DropDownSuggestionTextFieldState
   }
 
   void _onTextChanged(String value) {
+    // THIS LINE WAS MISSING — NOW IT WORKS!
     widget.onChanged?.call(value);
 
     if (_focusNode.hasFocus) {
       _updateDropdown();
-      if (!_isShowingDropdown) {
+      if (!_isShowingDropdown && value.isNotEmpty) {
         _showDropdown();
       }
     }
@@ -289,6 +289,7 @@ class _DropDownSuggestionTextFieldState
                     fontSize: 16,
                     color: Colors.white,
                   ),
+              // REMOVE THE 'value:' CALLBACK — IT'S DUPLICATE!
               maxLength: widget.maxLength,
               keyboardType: widget.keyboardType ?? TextInputType.text,
               padding: widget.padding ?? const EdgeInsets.all(18.3),
@@ -300,7 +301,8 @@ class _DropDownSuggestionTextFieldState
                     ? () {
                         if (!widget.enabled) return;
                         _controller.clear();
-                        _updateDropdown(); // show all again
+                        widget.onChanged?.call(""); // ← Notify clear
+                        _updateDropdown();
                       }
                     : null,
                 child: Icon(
